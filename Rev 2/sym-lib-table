@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name FIFO_P)(type Legacy)(uri ${KIPRJMOD}/FIFO_P.lib)(options "")(descr ""))
-)
