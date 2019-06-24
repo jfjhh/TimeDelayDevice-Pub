@@ -1,4 +1,4 @@
-update=6/20/2019 1:34:04 PM
+update=6/24/2019 12:30:11 PM
 version=1
 last_client=kicad
 [cvpcb]
@@ -22,7 +22,7 @@ ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=
-LastNetListRead=
+LastNetListRead=FIFO_P.net
 CopperLayerCount=4
 BoardThickness=1.6
 AllowMicroVias=0
@@ -36,9 +36,10 @@ MinMicroViaDiameter=0.2
 MinMicroViaDrill=0.09999999999999999
 MinHoleToHole=0.25
 TrackWidth1=0.25
-TrackWidth2=0.5
-TrackWidth3=1
-TrackWidth4=2
+TrackWidth2=0.2
+TrackWidth3=0.5
+TrackWidth4=1
+TrackWidth5=2
 ViaDiameter1=0.8
 ViaDrill1=0.4
 dPairWidth1=0.2
@@ -67,7 +68,7 @@ OthersTextUpright=1
 SolderMaskClearance=0
 SolderMaskMinWidth=0
 SolderPasteClearance=0
-SolderPasteRatio=-0
+SolderPasteRatio=0
 [pcbnew/Layer.F.Cu]
 Name=F.Cu
 Type=2
