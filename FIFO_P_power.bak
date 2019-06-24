@@ -20,7 +20,7 @@ U 1 1 5C53126A
 P 2150 900
 F 0 "U12" H 1950 1100 50  0000 C CNN
 F 1 "LM2940CT-5.0" H 2150 1100 50  0000 L CNN
-F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 2150 1200 50  0000 C CIN
+F 2 "Package_TO_SOT_THT:TO-220-3_Horizontal_TabDown" H 2150 1200 50  0000 C CIN
 F 3 "" H 2150 900 50  0000 C CNN
 	1    2150 900 
 	1    0    0    -1  
@@ -31,7 +31,7 @@ U 1 1 5C531271
 P 3800 900
 F 0 "U13" H 3600 1100 50  0000 C CNN
 F 1 "LM2940CT-3.3" H 3800 1100 50  0000 L CNN
-F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 3800 1200 50  0000 C CIN
+F 2 "Package_TO_SOT_THT:TO-220-3_Horizontal_TabDown" H 3800 1200 50  0000 C CIN
 F 3 "" H 3800 900 50  0000 C CNN
 	1    3800 900 
 	1    0    0    -1  
@@ -256,77 +256,16 @@ F 3 "~" H 3900 2150 50  0001 C CNN
 	1    3700 2150
 	1    0    0    -1  
 $EndComp
-$Comp
-L power:GND #PWR038
-U 1 1 5D152ECC
-P 2150 2000
-F 0 "#PWR038" H 2150 1750 50  0001 C CNN
-F 1 "GND" V 2155 1872 50  0000 R CNN
-F 2 "" H 2150 2000 50  0001 C CNN
-F 3 "" H 2150 2000 50  0001 C CNN
-	1    2150 2000
-	0    -1   -1   0   
-$EndComp
-$Comp
-L Regulator_SwitchedCapacitor:LM2776 U11
-U 1 1 5D148E12
-P 1650 2350
-F 0 "U11" H 2000 2350 50  0000 L CNN
-F 1 "LM2776" H 2000 2250 50  0000 L CNN
-F 2 "Package_TO_SOT_SMD:SOT-23-6" H 1700 2000 50  0001 L CNN
-F 3 "http://www.ti.com/lit/ds/symlink/lm2776.pdf" H -200 3600 50  0001 C CNN
-	1    1650 2350
-	1    0    0    -1  
-$EndComp
-$Comp
-L Device:C C24
-U 1 1 5D151B07
-P 1950 2000
-F 0 "C24" V 1900 1850 50  0000 C CNN
-F 1 ".47uF" V 1800 2000 50  0000 C CNN
-F 2 "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm" H 1988 1850 50  0001 C CNN
-F 3 "~" H 1950 2000 50  0001 C CNN
-	1    1950 2000
-	0    1    1    0   
-$EndComp
-$Comp
-L Device:C C23
-U 1 1 5D141FD2
-P 1950 1700
-F 0 "C23" V 1900 1550 50  0000 C CNN
-F 1 "22uF" V 1800 1700 50  0000 C CNN
-F 2 "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm" H 1988 1550 50  0001 C CNN
-F 3 "~" H 1950 1700 50  0001 C CNN
-	1    1950 1700
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	2100 1700 2150 1700
-Wire Wire Line
-	2150 1700 2150 2000
-Wire Wire Line
-	2150 2000 2100 2000
-Connection ~ 2150 2000
 Connection ~ 2950 2250
 Wire Wire Line
 	2950 2250 3400 2250
 Text GLabel 3900 2250 2    60   Input ~ 0
 -5V
 Wire Wire Line
-	1700 2000 1650 2000
-Connection ~ 1700 2000
-Wire Wire Line
-	1700 1700 1800 1700
-Wire Wire Line
-	1700 2000 1700 1700
-Wire Wire Line
 	1650 2000 1200 2000
-Connection ~ 1650 2000
 Wire Wire Line
 	1650 2050 1650 2000
 Connection ~ 1200 2000
-Wire Wire Line
-	1800 2000 1700 2000
 Wire Wire Line
 	2050 2250 2500 2250
 $Comp
@@ -415,10 +354,10 @@ Wire Wire Line
 Wire Wire Line
 	1200 2650 1200 2550
 $Comp
-L Device:C C?
+L Device:C C31
 U 1 1 5D18736B
 P 3400 2400
-F 0 "C?" H 3515 2446 50  0000 L CNN
+F 0 "C31" H 3515 2446 50  0000 L CNN
 F 1 "22uF" H 3515 2355 50  0000 L CNN
 F 2 "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm" H 3438 2250 50  0001 C CNN
 F 3 "~" H 3400 2400 50  0001 C CNN
@@ -429,14 +368,25 @@ Connection ~ 3400 2250
 Wire Wire Line
 	3400 2250 3700 2250
 $Comp
-L power:GND #PWR?
+L power:GND #PWR042
 U 1 1 5D1879E4
 P 3400 2550
-F 0 "#PWR?" H 3400 2300 50  0001 C CNN
+F 0 "#PWR042" H 3400 2300 50  0001 C CNN
 F 1 "GND" H 3405 2377 50  0000 C CNN
 F 2 "" H 3400 2550 50  0001 C CNN
 F 3 "" H 3400 2550 50  0001 C CNN
 	1    3400 2550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Regulator_SwitchedCapacitor:LM2776 U11
+U 1 1 5D148E12
+P 1650 2350
+F 0 "U11" H 2000 2350 50  0000 L CNN
+F 1 "LM2776" H 2000 2250 50  0000 L CNN
+F 2 "Package_TO_SOT_SMD:SOT-23-6" H 1700 2000 50  0001 L CNN
+F 3 "http://www.ti.com/lit/ds/symlink/lm2776.pdf" H -200 3600 50  0001 C CNN
+	1    1650 2350
 	1    0    0    -1  
 $EndComp
 $EndSCHEMATC
