@@ -2,7 +2,7 @@
 
   (general
     (thickness 1.6)
-    (drawings 117)
+    (drawings 116)
     (tracks 1157)
     (zones 0)
     (modules 77)
@@ -3852,7 +3852,6 @@
   (gr_text "Short   \nto GND" (at 81.832 70.75) (layer F.SilkS)
     (effects (font (size 1 1) (thickness 0.15) italic) (justify right))
   )
-  (gr_line (start 104.25 75.75) (end 106 74) (layer B.Mask) (width 0.25))
   (gr_line (start 49.5 49.5) (end 49.5 149.5) (layer Edge.Cuts) (width 0.1) (tstamp 5D13AA1E))
   (gr_line (start 149.5 149.5) (end 49.5 149.5) (layer Edge.Cuts) (width 0.1))
   (gr_line (start 149.5 49.5) (end 149.5 149.5) (layer Edge.Cuts) (width 0.1) (tstamp 5D100850))
