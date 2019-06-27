@@ -2,7 +2,7 @@
 
   (general
     (thickness 1.6)
-    (drawings 125)
+    (drawings 126)
     (tracks 1159)
     (zones 0)
     (modules 77)
@@ -3629,6 +3629,9 @@
     )
   )
 
+  (gr_text "14 bit\n6 Msps" (at 107.75 82.75) (layer F.SilkS)
+    (effects (font (size 1 1) (thickness 0.15) italic))
+  )
   (gr_line (start 98.75 52) (end 98.25 52.25) (layer F.SilkS) (width 0.15))
   (gr_line (start 98.75 52) (end 98.25 51.75) (layer F.SilkS) (width 0.15))
   (gr_line (start 86.25 52) (end 86.75 52.25) (layer F.SilkS) (width 0.15))
@@ -3760,7 +3763,7 @@
   (gr_text DAC (at 108.96 126.815) (layer F.SilkS) (tstamp 5D168A97)
     (effects (font (size 2 2) (thickness 0.15) italic))
   )
-  (gr_text ADC (at 109.96 79.815) (layer F.SilkS)
+  (gr_text ADC (at 109.25 79.815) (layer F.SilkS)
     (effects (font (size 2 2) (thickness 0.15) italic))
   )
   (gr_text FIFO (at 104.71 92.065) (layer F.SilkS)
