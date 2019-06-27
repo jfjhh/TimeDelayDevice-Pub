@@ -3,7 +3,7 @@
   (general
     (thickness 1.6)
     (drawings 116)
-    (tracks 1160)
+    (tracks 1159)
     (zones 0)
     (modules 77)
     (nets 89)
@@ -1610,7 +1610,7 @@
     )
   )
 
-  (module FIFO_P:LQFP-64_14x14mm_P0.8mm_HandSolder (layer F.Cu) (tedit 5D151161) (tstamp 5D10022C)
+  (module FIFO_P:LQFP-64_14x14mm_P0.8mm_HandSolder locked (layer F.Cu) (tedit 5D151161) (tstamp 5D10022C)
     (at 117.6 97.175 270)
     (descr "LQFP, 64 Pin (https://www.nxp.com/docs/en/package-information/SOT791-1.pdf), generated with kicad-footprint-generator ipc_gullwing_generator.py")
     (tags "LQFP QFP")
@@ -4980,7 +4980,6 @@
   (segment (start 70.6 88.75) (end 73.25 88.75) (width 0.5) (layer B.Cu) (net 88) (tstamp 5D15839C))
   (segment (start 74.75 94.75) (end 74.75 89) (width 1) (layer F.Cu) (net 88) (tstamp 5D1582A9))
   (segment (start 74.75 83.08) (end 74.75 89) (width 1) (layer F.Cu) (net 88) (tstamp 5D1582B5))
-  (segment (start 74.21 82.54) (end 74.75 83.08) (width 1) (layer F.Cu) (net 88) (tstamp 5D1582B8))
   (segment (start 82.75 89) (end 82.75 91) (width 1) (layer F.Cu) (net 88) (tstamp 5D1582A3))
   (segment (start 82.75 89) (end 82.75 87) (width 1) (layer F.Cu) (net 88) (tstamp 5D1582A6))
   (segment (start 88.25 89) (end 88.25 87) (width 1) (layer F.Cu) (net 88) (tstamp 5D1582AF))
