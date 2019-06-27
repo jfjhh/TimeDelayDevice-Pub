@@ -15,17 +15,6 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L FIFO_P:LTC1740 U3
-U 1 1 592106E2
-P 2100 2850
-F 0 "U3" H 2750 1000 60  0000 C CNN
-F 1 "LTC1740" H 2750 2950 60  0000 C CNN
-F 2 "FIFO_P:SSOP-36_5.3mm_Pitch0.65mm" H 2700 2050 60  0001 C CNN
-F 3 "" H 2700 2050 60  0000 C CNN
-	1    2100 2850
-	1    0    0    -1  
-$EndComp
-$Comp
 L Device:R R1
 U 1 1 59211740
 P 750 2400
@@ -783,8 +772,6 @@ Wire Wire Line
 	450  3200 750  3200
 Connection ~ 750  2900
 Wire Wire Line
-	2100 2250 2100 2850
-Wire Wire Line
 	1150 2450 1950 2450
 Wire Wire Line
 	2000 2450 2000 2950
@@ -844,8 +831,6 @@ Wire Wire Line
 Wire Wire Line
 	3350 3250 3550 3250
 Wire Wire Line
-	3350 2350 3350 2850
-Wire Wire Line
 	3350 5050 3350 4550
 Wire Wire Line
 	3350 3850 4450 3850
@@ -861,8 +846,6 @@ Wire Wire Line
 	3350 4350 4450 4350
 Wire Wire Line
 	3350 4450 4450 4450
-Wire Wire Line
-	2050 5100 3400 5100
 Wire Wire Line
 	3400 5100 3400 4550
 Wire Wire Line
@@ -1495,7 +1478,7 @@ F0 "Sheet5C530B6D" 60
 F1 "FIFO_P_power.sch" 60
 $EndSheet
 Text Notes 450  1950 0    60   ~ 0
-For DC coupled, Dual Supply, non-differential signaling,\n(i.e. a single singnal on a signle cable) JP1 connedts pins 1 & 2.\nR4 and C1 create an RC filter to reduce noise.
+For DC coupled, Dual Supply, non-differential signaling,\n(i.e. a single signal on a signal cable) JP1 connects pins 1 & 2.\nR4 and C4 create an RC filter to reduce noise.
 Wire Notes Line
 	1450 2000 1450 2750
 Text GLabel 4150 1050 0    60   Input ~ 0
@@ -1740,16 +1723,8 @@ $EndComp
 NoConn ~ 5300 5250
 NoConn ~ 5400 5250
 NoConn ~ 5500 5250
-NoConn ~ 2100 4550
-Connection ~ 3350 3250
-Connection ~ 3350 3550
-Wire Wire Line
-	2050 5100 2050 4850
 Wire Wire Line
 	2050 3850 2100 3850
-Connection ~ 2050 4850
-Wire Wire Line
-	2050 4850 2050 3850
 Wire Wire Line
 	2100 3350 2050 3350
 Wire Wire Line
@@ -1899,4 +1874,27 @@ F 3 "~" H 6600 7850 50  0001 C CNN
 	1    6600 7850
 	0    1    1    0   
 $EndComp
+Connection ~ 3350 3550
+Connection ~ 3350 3250
+Wire Wire Line
+	3350 2350 3350 2850
+Wire Wire Line
+	2100 2250 2100 2850
+$Comp
+L FIFO_P:LTC1740 U3
+U 1 1 592106E2
+P 2100 2850
+F 0 "U3" H 2750 1000 60  0000 C CNN
+F 1 "LTC1740" H 2750 2950 60  0000 C CNN
+F 2 "FIFO_P:SSOP-36_5.3mm_Pitch0.65mm" H 2700 2050 60  0001 C CNN
+F 3 "" H 2700 2050 60  0000 C CNN
+	1    2100 2850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2100 4550 2100 5100
+Wire Wire Line
+	2100 5100 3400 5100
+Wire Wire Line
+	2050 4850 2050 3850
 $EndSCHEMATC
