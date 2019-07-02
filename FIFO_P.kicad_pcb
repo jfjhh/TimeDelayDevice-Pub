@@ -31,12 +31,12 @@
     (45 Margin user hide)
     (46 B.CrtYd user)
     (47 F.CrtYd user)
-    (48 B.Fab user hide)
+    (48 B.Fab user)
     (49 F.Fab user hide)
   )
 
   (setup
-    (last_trace_width 0.5)
+    (last_trace_width 0.25)
     (user_trace_width 0.2)
     (user_trace_width 0.25)
     (user_trace_width 0.5)
@@ -283,7 +283,7 @@
     (add_net WLSTN)
   )
 
-  (module Potentiometer_THT:Potentiometer_Bourns_3296W_Vertical (layer F.Cu) (tedit 5D1A87F5) (tstamp 5D1C1166)
+  (module Potentiometer_THT:Potentiometer_Bourns_3296W_Vertical locked (layer F.Cu) (tedit 5D1A87F5) (tstamp 5D1A95B8)
     (at 110.515 132.306 270)
     (descr "Potentiometer, vertical, Bourns 3296W, https://www.bourns.com/pdfs/3296.pdf")
     (tags "Potentiometer vertical Bourns 3296W")
@@ -325,7 +325,7 @@
     )
   )
 
-  (module Connector_Coaxial:BNC_TEConnectivity_1478204_Vertical (layer F.Cu) (tedit 5A1DBFC1) (tstamp 5D1C49B2)
+  (module Connector_Coaxial:BNC_TEConnectivity_1478204_Vertical locked (layer F.Cu) (tedit 5A1DBFC1) (tstamp 5D1C49B2)
     (at 118 143.575 180)
     (descr "BNC female PCB mount 4 pin straight chassis connector http://www.te.com/usa-en/product-1-1478204-0.html")
     (tags "BNC female PCB mount 4 pin straight chassis connector ")
@@ -3789,7 +3789,7 @@
   (gr_text "Clock\nBuffer" (at 126.75 81) (layer F.SilkS)
     (effects (font (size 1 1) (thickness 0.15) italic))
   )
-  (gr_text "Arduino Due" (at 147.96 95.065 180) (layer B.SilkS) (tstamp 5D169BA1)
+  (gr_text "Arduino Due" (at 147.75 95.065 270) (layer B.SilkS) (tstamp 5D1A9970)
     (effects (font (size 2 2) (thickness 0.15) italic) (justify mirror))
   )
   (gr_text "Delay\nAdjust" (at 125.5 129) (layer F.SilkS) (tstamp 5D16931C)
