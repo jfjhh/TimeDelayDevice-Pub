@@ -7,8 +7,8 @@
  *
  * Version  Date        Author       Changes
  * -------  ----------  -----------  -----------------------------------------------
- * v1.0.0   2016-12-15  Edgar Perez  Prototype completed.
- * v1.0.1   2019-06-XX  Alex Striff  Modified for publication board.
+ * v1.0     2016-12-15  Edgar Perez  Prototype completed.
+ * v2.0     2019-07-XX  Alex Striff  Modified for publication board.
  *
  * Notes
  * =====
@@ -17,10 +17,10 @@
  *
  ********************************************************************************/
 
-// Uncomment to enable LCD output.
-// #define LCD
+// Uncomment to enable screen output.
+// #define SCREEN
 
-#ifdef LCD
+#ifdef SCREEN
 #include <Wire.h>
 #include <Adafruit_RGBLCDShield.h>
 #include <utility/Adafruit_MCP23017.h>
@@ -33,17 +33,17 @@
 #define VIOLET  RED   | BLUE
 #define WHITE   RED   | GREEN | BLUE
 
-// The LCD uses the I2C SCL and SDA pins.
+// The SCREEN uses the I2C SCL and SDA pins.
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 char toprow[16];
 int cursloc;
-#endif // LCD
+#endif // SCREEN
 
 typedef const uint8_t pin;
 
 typedef struct {
     pin p;                      // The pin that the button is connected to.
-    long debounce_delay;        // The delay for debouncing a button press.
+    long debounce_delay;        // The delay (ms) for debouncing a button press.
     int state;                  // The current state of the button.
     int last_state;             // The last state of the button.
     long last_debounce_time;    // The last debounce time for the button.
@@ -61,107 +61,107 @@ const uint32_t max_words = 262144;
 
 // Rotary encoder pin mapping
 rotary_encoder enc = {
-    .a   = 25,
-    .b   = 26,
+    .a   = 51,
+    .b   = 48,
     .btn = {
-        .p = 28,
-        .debounce_delay = 10,
+        .p = 46,
+        .debounce_delay = 5,
         .state = 0,
         .last_state = 0,
         .last_debounce_time = 0
     }
 };
 
-uint32_t words   = 10; // This variable will be changed by (initial) encoder input
+uint32_t words = 10; // This variable will be changed by (initial) encoder input
+unsigned int digit = 0;
+
 int32_t  count_min = min_words;
 int32_t  count_max = max_words;
 int32_t  count_mul = 1000;
 
 // Clock enabling (for DAC setup)
-pin CLK_EN = 7;
+pin CLK_EN = 7; // OLD: Bodge me!?
 
 // FIFO pin mapping
-pin OE     = 22;
-pin RT     = 23;
-pin REN    = 24;
-pin OR     = 27;
-pin PAE    = 29;
-pin HF     = 34;
-pin PAF    = 37;
-pin IR     = 38;
-pin FWFTSI = 39;
-pin LD     = 40;
-pin MRS    = 41;
-pin PRS    = 42;
-pin WCLK   = 46;
-pin WEN    = 45;
-pin SEN    = 44;
-pin WLSTN  = 47;
+pin RT    = 53;
+pin OE    = 52;
+pin REN   = 50;
+pin OR    = 49;
+pin PAE   = 47;
+pin HF    = 40;
+pin PAF   = 39;
+pin FWFT  = 37;
+pin IR    = 36;
+pin LD    = 34;
+pin MRS   = 35;
+pin PRS   = 32;
+pin WEN   = 31;
+pin SEN   = 30;
+pin WLSTN = 29;
+pin WCLK  = 28;
 
 // ADC pin mapping
-pin DAC_LDAC = 3;
-pin DAC_CS   = 4;
-
-// FIFO constant mapping
-int PAF_flag;
+pin DAC_LDAC = 26;
+pin DAC_CS   = 24;
 
 // Serial buffers
-#define SBLEN   8
-#define SBBLEN  9
+#define SBLEN  16
 char sb[SBLEN];
-char sbb[SBBLEN];
 
 
 void setup(void)
 {
     // Serial communication
     Serial.begin(115200);
-    Serial.println("===================");
-    Serial.println(" Time Delay Device ");
-    Serial.println("===================");
-    Serial.println("Type 'h' for help.");
-    Serial.print("Setting up I/O ... ");
+    Serial.print(
+        "===================\n"
+        " Time Delay Device \n"
+        "===================\n"
+        "Type 'h' for help.\n"
+        "Setting up I/O ... ");
 
     // FIFO pins
-    pinMode(OE, OUTPUT);
-    pinMode(RT, OUTPUT);
-    pinMode(REN, INPUT);
-    pinMode(OR, INPUT_PULLUP);
-    pinMode(PAE, INPUT_PULLUP);
-    pinMode(HF, INPUT_PULLUP);
-    pinMode(PAF, INPUT_PULLUP);
-    pinMode(IR, INPUT_PULLUP);
-    pinMode(FWFTSI, OUTPUT);
-    pinMode(LD, OUTPUT);
-    pinMode(MRS, OUTPUT);
-    pinMode(PRS, OUTPUT);
-    pinMode(WCLK, OUTPUT);
-    pinMode(WEN, OUTPUT);
-    pinMode(SEN, OUTPUT);
+    pinMode(REN,   INPUT);
+    pinMode(OR,    INPUT_PULLUP);
+    pinMode(PAE,   INPUT_PULLUP);
+    pinMode(HF,    INPUT_PULLUP);
+    pinMode(PAF,   INPUT_PULLUP);
+    pinMode(IR,    INPUT_PULLUP);
+    pinMode(OE,    OUTPUT);
+    pinMode(RT,    OUTPUT);
+    pinMode(FWFT,  OUTPUT);
+    pinMode(LD,    OUTPUT);
+    pinMode(MRS,   OUTPUT);
+    pinMode(PRS,   OUTPUT);
+    pinMode(WCLK,  OUTPUT);
+    pinMode(WEN,   OUTPUT);
+    pinMode(SEN,   OUTPUT);
     pinMode(WLSTN, OUTPUT);
 
     // FIFO default states
-    digitalWrite(MRS, HIGH);
-    digitalWrite(PRS, HIGH);
-    digitalWrite(RT, HIGH);
-    digitalWrite(FWFTSI, HIGH);
-    digitalWrite(LD, HIGH);
-    digitalWrite(WEN, HIGH);
-    digitalWrite(REN, HIGH);
-    digitalWrite(SEN, HIGH);
-    digitalWrite(OE, LOW);
-    digitalWrite(WCLK, LOW);
+    digitalWrite(MRS,   HIGH);
+    digitalWrite(PRS,   HIGH);
+    digitalWrite(RT,    HIGH);
+    digitalWrite(FWFT,  HIGH);
+    digitalWrite(LD,    HIGH);
+    digitalWrite(WEN,   HIGH);
+    digitalWrite(REN,   HIGH);
+    digitalWrite(SEN,   HIGH);
+    digitalWrite(OE,    LOW);
+    digitalWrite(WCLK,  LOW);
     digitalWrite(WLSTN, LOW);
 
-    // DAC pins and boot
-    pinMode(DAC_CS, OUTPUT);
-    pinMode(CLK_EN, OUTPUT);
+    // DAC pins
+    pinMode(DAC_CS,   OUTPUT);
+    pinMode(CLK_EN,   OUTPUT);
     pinMode(DAC_LDAC, OUTPUT);
+
+    // DAC initialization
     digitalWrite(CLK_EN, LOW);
-    digitalWrite(DAC_LDAC,HIGH);
+    digitalWrite(DAC_LDAC, HIGH);
     delay(5);
-    digitalWrite(CLK_EN,HIGH);
-    digitalWrite(DAC_LDAC,LOW);
+    digitalWrite(CLK_EN, HIGH);
+    digitalWrite(DAC_LDAC, LOW);
 
     digitalWrite(DAC_CS, HIGH);
     delay(5);
@@ -171,19 +171,17 @@ void setup(void)
     delay(5);
     digitalWrite(DAC_CS, LOW);
 
-    // Rotary encoder
+    // Rotary encoder pins
     pinMode(enc.btn.p, INPUT_PULLUP);
-    pinMode(enc.a, INPUT_PULLUP);
-    digitalWrite(enc.a, HIGH);
-    pinMode(enc.b, INPUT_PULLUP);
-    digitalWrite(enc.b, HIGH);
+    pinMode(enc.a,     INPUT_PULLUP);
+    pinMode(enc.b,     INPUT_PULLUP);
 
-    #ifdef LCD
-    // LCD
+    #ifdef SCREEN
+    // Screen
     lcd.begin(16, 2);
     lcd.setBacklight(WHITE);
     lcd.print("Hello, world!2");
-    #endif // LCD
+    #endif // SCREEN
 
     // Do a master reset to initialize the FIFO
     Serial.print(" complete. Initializing FIFO:\n\t");
@@ -199,25 +197,25 @@ void loop(void)
 
     live_rotor();
 
-    if (Serial.available() > 0) {
-        Serial.readBytesUntil('*', sbb, SBBLEN);
-        for (int i = 1; i < SBBLEN; i++) {
-            sb[i-1] = sbb[i];
-        }
+    for (int i = 0; i < SBLEN; i++)
+        sb[i] = '\0';
 
-        narg = atol(sb);
-        switch (sbb[0]) {
+    if (Serial.available() > 0) {
+        Serial.readBytesUntil('*', sb, SBLEN);
+        
+        narg = atol(sb + 1);
+        switch (sb[0]) {
             case 'h': // Fallthrough.
             case 'H': // Fallthrough.
             case '?': serial_help(); break;
             case 'm':
-                if(sb[0] == 'r')
+                if(sb[1] == 'r')
                     master_reset();
                 else
                     unknown();
                 break;
             case 'p':
-                if(sb[0] == 'r')
+                if(sb[1] == 'r')
                     partial_reset();
                 else
                     unknown();
@@ -231,8 +229,6 @@ void loop(void)
                 unknown();
                 
         }
-
-        sbbclear();
     }
 }
 
@@ -261,7 +257,7 @@ void serial_help(void)
             "\tValues outside this range will be clamped, so 'D0' is the same as 'D3'.\n"
             "\t<time delay> = <delay words> * <clock period>.\n"
             "s\tReports FIFO status.\n"
-            "x N\tPauses for N seconds.\n"
+            "x N\tPauses for N seconds (neglecting serial delays; not precise).\n"
             "i\tInitializes the program.\n"
             "q\tQuits the program.\n"
             "h H ?\tShows this help.\n"
@@ -270,49 +266,30 @@ void serial_help(void)
 }
 
 
-void sbshift(void)
-{
-    sb[0] -= 48;
-    for (int i = SBLEN - 1; i > 0; i--)
-        sb[i] = sb[i-1];
-}
-
-
-void sbclear(void)
-{
-    for(int i = 0; i < SBLEN; i++)
-        sb[i] = 0;
-}
-
-
-void sbbclear(void)
-{
-    for(int i = 0; i < SBBLEN; i++)
-        sbb[i] = 0;
-}
-
-
 void partial_reset(void)
 {
     long t1, t2;
     Serial.print("Partial Reset ... ");
     t1 = micros();
-    digitalWrite(WLSTN, 1);
+    digitalWrite(WLSTN, HIGH);
     delay(1);
-    digitalWrite(REN, 1);
-    digitalWrite(WEN, 1);
-    digitalWrite(RT, 1);
+    
+    digitalWrite(REN, HIGH);
+    digitalWrite(WEN, HIGH);
+    digitalWrite(RT,  HIGH);
     delayMicroseconds(3);
-    digitalWrite(PRS,LOW);
+    digitalWrite(PRS, LOW);
     delayMicroseconds(3);
-    digitalWrite(PRS,HIGH);
+    digitalWrite(PRS, HIGH);
     delayMicroseconds(3);
-    digitalWrite(WEN, 0);
-    digitalWrite(WLSTN, 0);
+    digitalWrite(WEN, LOW);
+    digitalWrite(WLSTN, LOW);
+    
     t2 = micros() - t1;
+    delayMicroseconds(1);
     Serial.print("done (");
     Serial.print(t2);
-    Serial.print(" us).\n");
+    Serial.println(" us).");
 }
 
 
@@ -321,11 +298,12 @@ void master_reset(void)
     long t1, t2;
     Serial.print("Master Reset ... ");
     t1 = micros();
-    digitalWrite(FWFTSI, HIGH);
-    digitalWrite(LD, HIGH);
-    digitalWrite(MRS, LOW);
+    digitalWrite(FWFT, HIGH);
+    digitalWrite(LD,   HIGH);
+    digitalWrite(MRS,  LOW);
     delayMicroseconds(1);
-    digitalWrite(MRS,HIGH);
+    digitalWrite(MRS, HIGH);
+    
     t2 = micros() - t1;
     delayMicroseconds(1);
     Serial.print("done (");
@@ -337,24 +315,32 @@ void master_reset(void)
 
 void report_status(void)
 {
-    Serial.println("FIFO Status");
-    Serial.println("===========");
-    Serial.print("IR\t"); Serial.println(digitalRead(IR));
-    Serial.print("OR\t"); Serial.println(digitalRead(OR));
+    Serial.print(
+        "FIFO Status\n"
+        "===========\n");
+    Serial.print("IR\t");  Serial.println(digitalRead(IR));
+    Serial.print("OR\t");  Serial.println(digitalRead(OR));
     Serial.print("PAF\t"); Serial.println(digitalRead(PAF));
     Serial.print("PAE\t"); Serial.println(digitalRead(PAE));
-    Serial.print("HF\t"); Serial.println(digitalRead(HF));
+    Serial.print("HF\t");  Serial.println(digitalRead(HF));
     Serial.println();
+
+    // DEBUGGING
+    Serial.println(digit);
+    Serial.println(words);
+    Serial.println(ipow(3, 0));
+    Serial.println(ipow(3, 1));
+    Serial.println(ipow(3, 5));
 }
 
 
 void pause(unsigned int n)
 {
-    for(int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         Serial.println(n - i);
         delay(1000);
     }
-    Serial.println(0);
+    Serial.println("0.");
 }
 
 
@@ -380,7 +366,7 @@ void set_delay(unsigned int n)
     // number of words AWAY FROM the end, not AT the given word like PAE.
     for (int i = 0; i < 36 ; i++) {
         bits = i == 0 ? 1 : bitRead(m, i - 18);
-        digitalWrite(FWFTSI, bits);
+        digitalWrite(FWFT, bits);
         delayMicroseconds(1);
         digitalWrite(WCLK, 1);
         delayMicroseconds(1);
@@ -393,12 +379,12 @@ void set_delay(unsigned int n)
     Serial.print("done. Resetting: ");
     partial_reset();
 
-    #ifdef LCD
+    #ifdef SCREEN
     sprintf(toprow, "D.Words = %06u", n);
     lcd.home();
     lcd.clear();
     lcd.print(toprow);
-    #endif // LCD
+    #endif // SCREEN
 }
 
 
@@ -418,7 +404,7 @@ void quit(void)
 }
 
 
-int8_t read_encoder(rotary_encoder *e)
+int read_encoder(rotary_encoder *e)
 {
     static int8_t enc_states[4][4] = {
         { 0, -1,  1,  0},
@@ -439,21 +425,39 @@ int8_t read_encoder(rotary_encoder *e)
 
 int32_t clamp(int32_t x, int32_t min, int32_t max)
 {
-    return x <= min ? count_min : x >= max ? max : x;
+    return x <= min ? min : x >= max ? max : x;
+}
+
+
+int ipow(int base, unsigned int exp)
+{
+    int result = 1;
+    
+    for (; exp; base *= base, exp >>= 1)
+        if (exp & 1)
+            result *= base;
+
+    return result;
 }
 
 
 uint32_t rotary(void)
 {
-    int8_t  tmpdata;
+    int     direction;
     int32_t mul;
     int32_t count = words;
-    tmpdata = read_encoder(&enc);
+    direction = read_encoder(&enc);
 
-    if (tmpdata) {
-        mul = read_button(&(enc.btn)) ? count_mul : 1;
-        count += mul * tmpdata;
-        count = clamp(count, count_min, count_max);
+    if (direction) {
+        if (read_button(&(enc.btn))) {
+            digit = clamp(digit + direction, 0, 5);
+            Serial.print("Button press: ");
+            Serial.println(digit);
+        } else {
+            count = clamp(count + direction * ipow(10, digit), count_min, count_max);
+            Serial.print("Count: ");
+            Serial.println(count);
+        }
     }
 
     return (uint32_t) count;
