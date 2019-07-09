@@ -10,33 +10,66 @@
  * v1.0     2016-12-15  Edgar Perez  Prototype completed.
  * v2.0     2019-07-XX  Alex Striff  Modified for publication board.
  *
- * Notes
- * =====
- * By pressing down the rotary encoder's push button, the encoder takes steps
- * of 1000 words instead of a single word (set by the `count_mul` variable).
- *
  ********************************************************************************/
 
-// Uncomment to enable screen output.
-// #define SCREEN
+// Code options (feature selection)
+#define DEBUG // Uncomment for serial debug output
+#define SCREEN // Uncomment to enable screen output
 
 #ifdef SCREEN
 #include <Wire.h>
-#include <Adafruit_RGBLCDShield.h>
-#include <utility/Adafruit_MCP23017.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "lato24.h"
 
-#define RED     0x1 << 0
-#define GREEN   0x1 << 1
-#define BLUE    0x1 << 2
-#define YELLOW  RED   | GREEN
-#define TEAL    GREEN | BLUE
-#define VIOLET  RED   | BLUE
-#define WHITE   RED   | GREEN | BLUE
+extern TwoWire Wire1; // Use second I2C pins on the Due
 
-// The SCREEN uses the I2C SCL and SDA pins.
-Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-char toprow[16];
-int cursloc;
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+#define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, OLED_RESET);
+boolean screen = true;
+boolean draw   = true;
+char s_digits[16];
+
+enum menu_mode {
+    MENU = 0, // Main menu
+    DELAY,    // Adjust the word count using the rotary encoder
+    FIFO,     // Show FIFO status
+    HELP,     // Show on-line help
+    ABOUT,    // About the device
+    FOO,
+    BAR,
+    BAZ,
+    QUUX,
+    A,
+    B,
+    C,
+    D,
+    MENU_MODES,
+} menu_mode = DELAY;
+const char menu_names[][16] = {
+    "Menu",
+    "Delay",
+    "FIFO",
+    "Help",
+    "About",
+    "Foo",
+    "Bar",
+    "Baz",
+    "Quux",
+    "A",
+    "B",
+    "C",
+    "D",
+};
+uint32_t menu_pos = MENU + 1;
+int menu_press = 0;
+
+int dpress = 0;
+long dpress_delay = 250L;
+long dpress_time = 0L;
+
 #endif // SCREEN
 
 typedef const uint8_t pin;
@@ -65,7 +98,7 @@ rotary_encoder enc = {
     .b   = 48,
     .btn = {
         .p = 46,
-        .debounce_delay = 5,
+        .debounce_delay = 10,
         .state = 0,
         .last_state = 0,
         .last_debounce_time = 0
@@ -73,7 +106,7 @@ rotary_encoder enc = {
 };
 
 uint32_t words = 10; // This variable will be changed by (initial) encoder input
-unsigned int digit = 0;
+uint32_t words_digit = 0;
 
 int32_t  count_min = min_words;
 int32_t  count_max = max_words;
@@ -112,7 +145,7 @@ char sb[SBLEN];
 void setup(void)
 {
     // Serial communication
-    Serial.begin(115200);
+    Serial.begin(9600);
     Serial.print(
         "===================\n"
         " Time Delay Device \n"
@@ -175,12 +208,31 @@ void setup(void)
     pinMode(enc.btn.p, INPUT_PULLUP);
     pinMode(enc.a,     INPUT_PULLUP);
     pinMode(enc.b,     INPUT_PULLUP);
-
+    
+    // Screen initialization
     #ifdef SCREEN
-    // Screen
-    lcd.begin(16, 2);
-    lcd.setBacklight(WHITE);
-    lcd.print("Hello, world!2");
+    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+        Serial.println(F("SSD1306 allocation failed. Unable to use screen."));
+        screen = false;
+    } else {
+        screen = true;
+        display.clearDisplay();
+        display.cp437(true);
+        display.setTextColor(WHITE);
+        display.setTextSize(1);
+        display.setCursor(0, 0);
+        display.print("Time Delay Device vP2");
+        display.setCursor(0, 8);
+        display.print("Reed College Physics");
+        display.setCursor(0, 24);
+        display.print("2-press knob for menu");
+        display.display();
+
+        for (uint8_t i = 0; i < SCREEN_WIDTH; i++) {
+            display.drawPixel(i, 16 + (i*i / 7) % 8, WHITE);
+            display.display();
+        }
+    }
     #endif // SCREEN
 
     // Do a master reset to initialize the FIFO
@@ -194,8 +246,6 @@ void setup(void)
 void loop(void)
 {
     unsigned long narg;
-
-    live_rotor();
 
     for (int i = 0; i < SBLEN; i++)
         sb[i] = '\0';
@@ -230,6 +280,77 @@ void loop(void)
                 
         }
     }
+
+    #ifdef SCREEN
+    if (screen) {
+        // Double-press detection
+        int press = read_button(&(enc.btn));
+        int quick = millis() - dpress_time <= dpress_delay;
+        if ((dpress == 0 && press)
+            || (dpress == 1 && !press && quick)
+            || (dpress == 2 && press && quick)) {
+            dpress_time = millis();
+            dpress++;
+        } else if (dpress == 3 && !press && quick) {
+            dpress = 0;
+            menu_mode = menu_mode != MENU ? MENU : DELAY;
+            draw = true;
+        } else if (!quick) {
+            dpress = 0;
+        }
+        
+        switch (menu_mode) {
+            case MENU:
+                menu_press = read_button(&enc.btn);
+                menu_pos = enc_adjust_nodigit(&menu_pos, MENU + 1, MENU_MODES - 1, true);
+                if (draw) {
+                    display.clearDisplay();
+                    display.setFont();
+                    for (size_t i = MENU + 1; i < MENU_MODES; i++) {
+                        int16_t x = 8 + ((i - 1) / 4) * SCREEN_WIDTH / ((MENU_MODES - 1) / 4);
+                        int16_t y = ((i - 1) % 4) * 8;
+                        display.setCursor(x, y);
+                        display.print(menu_names[i]);
+                    }
+
+                    int16_t alt = ((menu_pos - 1) / 4) * SCREEN_WIDTH / ((MENU_MODES - 1) / 4);
+                    int16_t mid = 2 + ((menu_pos - 1) % 4) * 8;
+                    display.fillTriangle(alt, mid - 2, alt, mid + 2, alt + 3, mid, WHITE);
+                    display.display();
+                    draw = false;
+                }
+
+                
+                break;
+              
+            case DELAY:
+                { // Surrounding block to disambiguate scope
+                    set_delay(enc_adjust(&words, &words_digit, count_min, count_max, false));
+                    if (draw) {
+                        sprintf(s_digits, "%06u", words);
+                        display.clearDisplay();
+                        display.setFont(&Lato_Regular_24);
+                        display.setCursor(0,24);
+                        display.print(s_digits);
+                        int16_t mid = 6 + (6 - words_digit - 1) * 15;
+                        int16_t base = 31;
+                        display.fillTriangle(mid - 3, base, mid + 3, base, mid, base - 4, WHITE);
+                        display.display();
+                        draw = false;
+                    }
+                }
+                break;
+
+            case HELP:
+                Serial.println("Help");
+                break;
+                
+            default:
+                Serial.println("Menu error!");
+                break;
+        }
+    }
+    #endif // SCREEN
 }
 
 
@@ -326,7 +447,7 @@ void report_status(void)
     Serial.println();
 
     // DEBUGGING
-    Serial.println(digit);
+    Serial.println(words_digit);
     Serial.println(words);
     Serial.println(ipow(3, 0));
     Serial.println(ipow(3, 1));
@@ -350,6 +471,7 @@ void set_delay(unsigned int n)
     int bits;
     
     n = clamp(n, min_words, max_words);
+    if (n == words) return;
     words = n;
     m = max_words - n;
     
@@ -378,13 +500,6 @@ void set_delay(unsigned int n)
     digitalWrite(WLSTN, 0);
     Serial.print("done. Resetting: ");
     partial_reset();
-
-    #ifdef SCREEN
-    sprintf(toprow, "D.Words = %06u", n);
-    lcd.home();
-    lcd.clear();
-    lcd.print(toprow);
-    #endif // SCREEN
 }
 
 
@@ -441,52 +556,62 @@ int ipow(int base, unsigned int exp)
 }
 
 
-uint32_t rotary(void)
+uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max, boolean reverse)
 {
     int     direction;
-    int32_t mul;
-    int32_t count = words;
-    direction = read_encoder(&enc);
+    int32_t count = *n;
+    direction = read_encoder(&enc) * (reverse ? -1 : 1);
 
     if (direction) {
         if (read_button(&(enc.btn))) {
-            digit = clamp(digit + direction, 0, 5);
+            *digit = clamp(*digit + direction, 0, 5);
+            #ifdef DEBUG
             Serial.print("Button press: ");
-            Serial.println(digit);
+            Serial.println(*digit);
+            #endif // DEBUG
         } else {
-            count = clamp(count + direction * ipow(10, digit), count_min, count_max);
+            count = clamp(count + direction * ipow(10, *digit), n_min, n_max);
+            #ifdef DEBUG
             Serial.print("Count: ");
             Serial.println(count);
+            #endif // DEBUG
         }
+        draw = true;
+        dpress = 0;
     }
 
     return (uint32_t) count;
 }
 
 
-void live_rotor(void)
+uint32_t enc_adjust_nodigit(uint32_t *n, uint32_t n_min, uint32_t n_max, boolean reverse)
 {
-    uint32_t rotorvalc = rotary();
-    
-    if (rotorvalc != words) {
-        set_delay(rotorvalc);
+    int     direction;
+    int32_t count = *n;
+    direction = read_encoder(&enc) * (reverse ? -1 : 1);
+
+    if (direction) {
+        count = clamp(count + direction, n_min, n_max);
+        #ifdef DEBUG
+        Serial.print("ND Count: ");
+        Serial.println(count);
+        #endif // DEBUG
+        draw = true;
+        dpress = 0;
     }
+
+    return (uint32_t) count;
 }
 
 
 int read_button(button *button)
 {
     int reading = digitalRead(button->p);
-    if (reading != button->last_state){
+    
+    if (reading != button->last_state)
         button->last_debounce_time = millis();
-    }
-
-    if (millis() - button->last_debounce_time > button->debounce_delay) {
-        if (reading != button->state) {
-            button->state = reading;
-        }
-        return button->state;
-    } else {
-        button->last_state = reading;
-    }
+    if (millis() - button->last_debounce_time > button->debounce_delay)
+        button->state = reading;
+    
+    return button->last_state = reading;
 }
