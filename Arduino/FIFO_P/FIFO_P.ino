@@ -98,7 +98,7 @@ rotary_encoder enc = {
     .b   = 48,
     .btn = {
         .p = 46,
-        .debounce_delay = 10,
+        .debounce_delay = 50,
         .state = 0,
         .last_state = 0,
         .last_debounce_time = 0
@@ -283,25 +283,8 @@ void loop(void)
 
     #ifdef SCREEN
     if (screen) {
-        // Double-press detection
-        int press = read_button(&(enc.btn));
-        int quick = millis() - dpress_time <= dpress_delay;
-        if ((dpress == 0 && press)
-            || (dpress == 1 && !press && quick)
-            || (dpress == 2 && press && quick)) {
-            dpress_time = millis();
-            dpress++;
-        } else if (dpress == 3 && !press && quick) {
-            dpress = 0;
-            menu_mode = menu_mode != MENU ? MENU : DELAY;
-            draw = true;
-        } else if (!quick) {
-            dpress = 0;
-        }
-        
         switch (menu_mode) {
             case MENU:
-                menu_press = read_button(&enc.btn);
                 menu_pos = enc_adjust_nodigit(&menu_pos, MENU + 1, MENU_MODES - 1, true);
                 if (draw) {
                     display.clearDisplay();
@@ -320,6 +303,13 @@ void loop(void)
                     draw = false;
                 }
 
+                if (read_button(&enc.btn)) {
+                    menu_press = 1;
+                } else if (menu_press == 1) { // button was pressed and now it is not
+                    menu_mode = (enum menu_mode) menu_pos;
+                    menu_press = 0;
+                    draw = true;
+                }
                 
                 break;
               
@@ -348,6 +338,24 @@ void loop(void)
             default:
                 Serial.println("Menu error!");
                 break;
+        }
+
+        // Double-press detection
+        if (menu_mode != MENU) {
+            int press = read_button(&(enc.btn));
+            int quick = millis() - dpress_time <= dpress_delay;
+            if ((dpress == 0 && press)
+                || (dpress == 1 && !press && quick)
+                || (dpress == 2 && press && quick)) {
+                dpress_time = millis();
+                dpress++;
+            } else if (dpress == 3 && !press && quick) {
+                dpress = 0;
+                menu_mode = menu_mode != MENU ? MENU : DELAY;
+                draw = true;
+            } else if (!quick) {
+                dpress = 0;
+            }
         }
     }
     #endif // SCREEN
