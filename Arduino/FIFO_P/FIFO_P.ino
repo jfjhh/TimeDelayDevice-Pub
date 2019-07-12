@@ -14,7 +14,7 @@
 
 // Code options (feature selection)
 #define DEBUG // Uncomment for serial debug output
-#define SCREEN // Uncomment to enable screen output
+// #define SCREEN // Uncomment to enable screen output
 
 #ifdef SCREEN
 #include <Wire.h>
@@ -112,9 +112,6 @@ int32_t  count_min = min_words;
 int32_t  count_max = max_words;
 int32_t  count_mul = 1000;
 
-// Clock enabling (for DAC setup)
-pin CLK_EN = 7; // OLD: Bodge me!?
-
 // FIFO pin mapping
 pin RT    = 53;
 pin OE    = 52;
@@ -133,11 +130,14 @@ pin SEN   = 30;
 pin WLSTN = 29;
 pin WCLK  = 28;
 
-// ADC pin mapping
+// DAC pin mapping
 pin DAC_LDAC = 26;
 pin DAC_CS   = 24;
 
-// Serial buffers
+// Clock enabling (for DAC setup)
+pin CLK_EN = 23; // C'est le Bodge Nouveau
+
+// Serial command buffer
 #define SBLEN  16
 char sb[SBLEN];
 
@@ -152,6 +152,14 @@ void setup(void)
         "===================\n"
         "Type 'h' for help.\n"
         "Setting up I/O ... ");
+
+    // DAC initialization
+    delay(10);
+    digitalWrite(CLK_EN, LOW);
+    digitalWrite(DAC_LDAC, HIGH);
+    delay(5);
+    digitalWrite(CLK_EN, HIGH);
+    digitalWrite(DAC_LDAC, LOW);
 
     // FIFO pins
     pinMode(REN,   INPUT);
@@ -185,17 +193,14 @@ void setup(void)
     digitalWrite(WLSTN, LOW);
 
     // DAC pins
-    pinMode(DAC_CS,   OUTPUT);
+    delay(100);
     pinMode(CLK_EN,   OUTPUT);
     pinMode(DAC_LDAC, OUTPUT);
+    pinMode(DAC_CS,   OUTPUT);
 
-    // DAC initialization
-    digitalWrite(CLK_EN, LOW);
-    digitalWrite(DAC_LDAC, HIGH);
-    delay(5);
-    digitalWrite(CLK_EN, HIGH);
-    digitalWrite(DAC_LDAC, LOW);
-
+    // More DAC initialization
+    delay(10);
+    pinMode(DAC_CS,   OUTPUT);
     digitalWrite(DAC_CS, HIGH);
     delay(5);
     digitalWrite(DAC_CS, LOW);
@@ -203,6 +208,7 @@ void setup(void)
     digitalWrite(DAC_CS, HIGH);
     delay(5);
     digitalWrite(DAC_CS, LOW);
+    delay(10);
 
     // Rotary encoder pins
     pinMode(enc.btn.p, INPUT_PULLUP);
@@ -447,11 +453,11 @@ void report_status(void)
     Serial.print(
         "FIFO Status\n"
         "===========\n");
-    Serial.print("IR\t");  Serial.println(digitalRead(IR));
-    Serial.print("OR\t");  Serial.println(digitalRead(OR));
-    Serial.print("PAF\t"); Serial.println(digitalRead(PAF));
-    Serial.print("PAE\t"); Serial.println(digitalRead(PAE));
-    Serial.print("HF\t");  Serial.println(digitalRead(HF));
+    Serial.print("~IR\t");  Serial.println(digitalRead(IR));
+    Serial.print("~OR\t");  Serial.println(digitalRead(OR));
+    Serial.print("~PAF\t"); Serial.println(digitalRead(PAF));
+    Serial.print("~PAE\t"); Serial.println(digitalRead(PAE));
+    Serial.print("~HF\t");  Serial.println(digitalRead(HF));
     Serial.println();
 
     // DEBUGGING
@@ -584,8 +590,10 @@ uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max
             Serial.println(count);
             #endif // DEBUG
         }
+        #ifdef SCREEN
         draw = true;
         dpress = 0;
+        #endif // SCREEN
     }
 
     return (uint32_t) count;
@@ -604,8 +612,10 @@ uint32_t enc_adjust_nodigit(uint32_t *n, uint32_t n_min, uint32_t n_max, boolean
         Serial.print("ND Count: ");
         Serial.println(count);
         #endif // DEBUG
+        #ifdef SCREEN
         draw = true;
         dpress = 0;
+        #endif // SCREEN
     }
 
     return (uint32_t) count;
