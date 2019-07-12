@@ -14,7 +14,7 @@
 
 // Code options (feature selection)
 #define DEBUG // Uncomment for serial debug output
-// #define SCREEN // Uncomment to enable screen output
+#define SCREEN // Uncomment to enable screen output
 
 #ifdef SCREEN
 #include <Wire.h>
