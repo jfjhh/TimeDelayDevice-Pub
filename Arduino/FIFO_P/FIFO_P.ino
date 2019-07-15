@@ -13,20 +13,25 @@
  ********************************************************************************/
 
 // Code options (feature selection)
-#define DEBUG // Uncomment for serial debug output
-#define SCREEN // Uncomment to enable screen output
+#define SCREEN   // Uncomment to enable screen output
+#define SCONTROL // Uncomment for serial control and logging
+#define DEBUG    // Uncomment for serial debug output
 
 #ifdef SCREEN
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+// #include <Fonts/FreeSans9pt7b.h>
 #include "lato24.h"
+
+#define DIGIT_FONT  &Lato_Regular_24 // 24 px high
+#define TEXT_FONT   NULL  // 8 px high, NULL for default font in Adafruit GFX
 
 extern TwoWire Wire1; // Use second I2C pins on the Due
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
-#define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define OLED_RESET    54 // Reset pin (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, OLED_RESET);
 boolean screen = true;
 boolean draw   = true;
@@ -48,7 +53,8 @@ enum menu_mode {
     D,
     MENU_MODES,
 } menu_mode = DELAY;
-const char menu_names[][16] = {
+
+const PROGMEM char menu_names[][16] = {
     "Menu",
     "Delay",
     "FIFO",
@@ -63,12 +69,18 @@ const char menu_names[][16] = {
     "C",
     "D",
 };
+
 uint32_t menu_pos = MENU + 1;
 int menu_press = 0;
 
+// Double-press parameters
 int dpress = 0;
-long dpress_delay = 250L;
+long dpress_delay = 100L;
 long dpress_time = 0L;
+
+// Repeated drawing parameters (in ms)
+long last_update = 0L;
+long update_interval = 100L; 
 
 #endif // SCREEN
 
@@ -89,8 +101,9 @@ typedef struct {
 } rotary_encoder;
 
 // FIFO word limits
-const uint32_t min_words = 3;
-const uint32_t max_words = 262144;
+const uint32_t min_words  = 3;
+const uint32_t max_words  = 262144;
+const uint32_t init_words = 10;
 
 // Rotary encoder pin mapping
 rotary_encoder enc = {
@@ -105,7 +118,7 @@ rotary_encoder enc = {
     }
 };
 
-uint32_t words = 10; // This variable will be changed by (initial) encoder input
+uint32_t words; // The number of delay words for the FIFO
 uint32_t words_digit = 0;
 
 int32_t  count_min = min_words;
@@ -130,6 +143,32 @@ pin SEN   = 30;
 pin WLSTN = 29;
 pin WCLK  = 28;
 
+// FIFO flags to show in status. All active low.
+enum fifo_flag {
+    F_IR = 0, // Input ready
+    F_OR,     // Output ready
+    F_PAF,    // Partially almost full
+    F_PAE,    // Partially almost empty
+    F_HF,     // Half full
+    F_SIZE,   // The number of flags (not on FIFO)
+} fifo_flags;
+
+const pin fifo_flag_pins[] = {
+    IR,
+    OR,
+    PAF,
+    PAE,
+    HF,
+};
+
+const PROGMEM char fifo_flag_names[][16] = {
+    "IR",
+    "OR",
+    "PAF",
+    "PAE",
+    "HF",
+};
+
 // DAC pin mapping
 pin DAC_LDAC = 26;
 pin DAC_CS   = 24;
@@ -146,12 +185,12 @@ void setup(void)
 {
     // Serial communication
     Serial.begin(9600);
-    Serial.print(
+    Serial.print(F(
         "===================\n"
         " Time Delay Device \n"
         "===================\n"
         "Type 'h' for help.\n"
-        "Setting up I/O ... ");
+        "Setting up I/O ... "));
 
     // DAC initialization
     delay(10);
@@ -214,6 +253,7 @@ void setup(void)
     pinMode(enc.btn.p, INPUT_PULLUP);
     pinMode(enc.a,     INPUT_PULLUP);
     pinMode(enc.b,     INPUT_PULLUP);
+    read_encoder(&enc); // Read to initialize previous quadrature state.
     
     // Screen initialization
     #ifdef SCREEN
@@ -227,11 +267,11 @@ void setup(void)
         display.setTextColor(WHITE);
         display.setTextSize(1);
         display.setCursor(0, 0);
-        display.print("Time Delay Device vP2");
+        display.print(F("Time Delay Device vP2"));
         display.setCursor(0, 8);
-        display.print("Reed College Physics");
+        display.print(F("Reed College Physics"));
         display.setCursor(0, 24);
-        display.print("2-press knob for menu");
+        display.print(F("2-press knob for menu"));
         display.display();
 
         for (uint8_t i = 0; i < SCREEN_WIDTH; i++) {
@@ -242,10 +282,11 @@ void setup(void)
     #endif // SCREEN
 
     // Do a master reset to initialize the FIFO
-    Serial.print(" complete. Initializing FIFO:\n\t");
+    Serial.print(F(" complete. Initializing FIFO:\n\t"));
     delay(5);
     master_reset();
     Serial.println();
+    set_delay(init_words);
 }
 
 
@@ -294,7 +335,7 @@ void loop(void)
                 menu_pos = enc_adjust_nodigit(&menu_pos, MENU + 1, MENU_MODES - 1, true);
                 if (draw) {
                     display.clearDisplay();
-                    display.setFont();
+                    display.setFont(TEXT_FONT);
                     for (size_t i = MENU + 1; i < MENU_MODES; i++) {
                         int16_t x = 8 + ((i - 1) / 4) * SCREEN_WIDTH / ((MENU_MODES - 1) / 4);
                         int16_t y = ((i - 1) % 4) * 8;
@@ -308,8 +349,8 @@ void loop(void)
                     display.display();
                     draw = false;
                 }
-
-                if (read_button(&enc.btn)) {
+                
+                if (read_button(&(enc.btn))) {
                     menu_press = 1;
                 } else if (menu_press == 1) { // button was pressed and now it is not
                     menu_mode = (enum menu_mode) menu_pos;
@@ -321,19 +362,64 @@ void loop(void)
               
             case DELAY:
                 { // Surrounding block to disambiguate scope
-                    set_delay(enc_adjust(&words, &words_digit, count_min, count_max, false));
+                    set_delay(enc_adjust(&words, &words_digit, count_min, count_max, false, false));
+                    int16_t  x, y;
+                    uint16_t w, h;
+                    int16_t digit_x = 0;
+                    int16_t digit_y = 24;
+
+                    draw |= millis() - last_update >= update_interval;
                     if (draw) {
-                        sprintf(s_digits, "%06u", words);
                         display.clearDisplay();
-                        display.setFont(&Lato_Regular_24);
-                        display.setCursor(0,24);
+                        sprintf(s_digits, "%06u", words);
+                        display.setFont(DIGIT_FONT);
+                        display.setCursor(digit_x, digit_y);
                         display.print(s_digits);
+                        
                         int16_t mid = 6 + (6 - words_digit - 1) * 15;
                         int16_t base = 31;
                         display.fillTriangle(mid - 3, base, mid + 3, base, mid, base - 4, WHITE);
+
+                        display.setFont(TEXT_FONT);
+                        display.getTextBounds(s_digits, digit_x, digit_y, &x, &y, &w, &h);
+                        display.setCursor(SCREEN_WIDTH - w + 6, digit_y - 2*h + 1);
+                        display.print(F("Delay"));
+                        display.getTextBounds(s_digits, digit_x, digit_y, &x, &y, &w, &h);
+                        display.setCursor(SCREEN_WIDTH - w + 6, digit_y - h + 1);
+                        display.print(F("words"));
+
+                        if (digitalRead(IR) | digitalRead(OR)) { // IR and OR are active low, so runs if FIFO I/O not ready
+                            display.getTextBounds(F("NoI/O"), digit_x, digit_y, &x, &y, &w, &h);
+                            display.setCursor(SCREEN_WIDTH - w, SCREEN_HEIGHT - h);
+                            display.print(F("NoI/O"));
+                        }
+                        
                         display.display();
                         draw = false;
                     }
+                }
+                break;
+
+            case FIFO:
+                {
+                    draw |= millis() - last_update >= update_interval;
+                    if (draw) {
+                        display.clearDisplay();
+                        display.setFont(TEXT_FONT);
+                        for (size_t i = 0; i < F_SIZE; i++) {
+                            int16_t x = 8 + (i / 4) * SCREEN_WIDTH / ((F_SIZE / 4) + 1);
+                            int16_t y = (i % 4) * 8;
+                            display.setCursor(x, y);
+                            display.print(fifo_flag_names[i]);
+                            display.setCursor(x + 4*8, y);
+                            display.print(digitalRead(fifo_flag_pins[i]) ? 0 : 1, DEC); // Invert to show understandable logic
+                        }
+                        display.display();
+                        draw = false;
+                        last_update = millis();
+                    }
+
+                    press_menu_return(&enc);
                 }
                 break;
 
@@ -367,26 +453,39 @@ void loop(void)
     #endif // SCREEN
 }
 
+#ifdef SCREEN
+void press_menu_return(rotary_encoder *e)
+{
+    if (read_button(&(e->btn))) {
+        menu_press = HIGH;
+    } else if (menu_press == HIGH) { // Button was pressed and now it is not
+        menu_press = LOW;
+        menu_mode = MENU;
+        menu_press = LOW;
+        draw = true;
+    }
+}
+#endif // SCREEN
 
 void unknown(void)
 {
-    Serial.println("Unknown Command. Type 'h' for help.");
+    Serial.println(F("Unknown Command. Type 'h' for help."));
     serial_help();
 }
 
 
 void serial_help(void)
 {
-    Serial.print(
+    Serial.print(F(
             "Time Delay Device Serial Commands\n"
             "=================================\n"
             "mr\tPerforms a master reset of FIFO memory.\n"
             "pr\tPerforms a partial reset of FIFO memory.\n"
-            "d N\tSets delay to N words, where N is a decimal number between ");
+            "d N\tSets delay to N words, where N is a decimal number between "));
     Serial.print(min_words, DEC);
-    Serial.print(" and ");
+    Serial.print(F(" and "));
     Serial.print(max_words, DEC);
-    Serial.print(
+    Serial.print(F(
             ".\n"
             "\tE.g.: 'D3' and 'D100' produce delays of 3 and 100 words, respectively.\n"
             "\tValues outside this range will be clamped, so 'D0' is the same as 'D3'.\n"
@@ -397,14 +496,14 @@ void serial_help(void)
             "q\tQuits the program.\n"
             "h H ?\tShows this help.\n"
             "\n"
-            );
+            ));
 }
 
 
 void partial_reset(void)
 {
     long t1, t2;
-    Serial.print("Partial Reset ... ");
+    Serial.print(F("Partial Reset ... "));
     t1 = micros();
     digitalWrite(WLSTN, HIGH);
     delay(1);
@@ -431,7 +530,7 @@ void partial_reset(void)
 void master_reset(void)
 {
     long t1, t2;
-    Serial.print("Master Reset ... ");
+    Serial.print(F("Master Reset ... "));
     t1 = micros();
     digitalWrite(FWFT, HIGH);
     digitalWrite(LD,   HIGH);
@@ -441,34 +540,40 @@ void master_reset(void)
     
     t2 = micros() - t1;
     delayMicroseconds(1);
-    Serial.print("done (");
+    Serial.print(F("done ("));
     Serial.print(t2);
-    Serial.println(" us).");
-    Serial.print("Device in FWFT with Serial Loading.\n");
+    Serial.println(F(" us)."));
+    Serial.print(F("Device in FWFT with Serial Loading.\n"));
 }
 
 
+#ifdef SCONTROL
 void report_status(void)
 {
-    Serial.print(
+    Serial.print(F(
         "FIFO Status\n"
-        "===========\n");
-    Serial.print("~IR\t");  Serial.println(digitalRead(IR));
-    Serial.print("~OR\t");  Serial.println(digitalRead(OR));
-    Serial.print("~PAF\t"); Serial.println(digitalRead(PAF));
-    Serial.print("~PAE\t"); Serial.println(digitalRead(PAE));
-    Serial.print("~HF\t");  Serial.println(digitalRead(HF));
+        "===========\n"));
+
+    for (size_t i = 0; i < F_SIZE; i++) {
+        Serial.print(F("~"));
+        Serial.print(fifo_flag_names[i]);
+        Serial.print(F("\t"));
+        Serial.println(digitalRead(fifo_flag_pins[i]), DEC);
+    }
     Serial.println();
 
-    // DEBUGGING
+    #ifdef DEBUG
     Serial.println(words_digit);
     Serial.println(words);
     Serial.println(ipow(3, 0));
     Serial.println(ipow(3, 1));
     Serial.println(ipow(3, 5));
+    #endif // DEBUG
 }
+#endif // SCONTROL
 
 
+#ifdef SCONTROL
 void pause(unsigned int n)
 {
     for (int i = 0; i < n; i++) {
@@ -477,6 +582,7 @@ void pause(unsigned int n)
     }
     Serial.println("0.");
 }
+#endif // SCONTROL
 
 
 void set_delay(unsigned int n)
@@ -489,7 +595,9 @@ void set_delay(unsigned int n)
     words = n;
     m = max_words - n;
     
-    Serial.print("Sending a "); Serial.print(n); Serial.print(" word delay ... ");
+    Serial.print(F("Sending a "));
+    Serial.print(n);
+    Serial.print(F("-word delay ... "));
     digitalWrite(WLSTN, 1);
     delayMicroseconds(10);
 
@@ -512,7 +620,7 @@ void set_delay(unsigned int n)
     digitalWrite(LD, 1);
     digitalWrite(SEN, 1);
     digitalWrite(WLSTN, 0);
-    Serial.print("done. Resetting: ");
+    Serial.print(F("done. Resetting: "));
     partial_reset();
 }
 
@@ -521,7 +629,7 @@ void initialize(void)
 {
     digitalWrite(WEN, 0);
     digitalWrite(REN, 0);
-    Serial.println("Initiated program.");
+    Serial.println(F("Initiated program."));
 }
 
 
@@ -529,7 +637,7 @@ void quit(void)
 {
     digitalWrite(WEN, 1);
     digitalWrite(REN, 1);
-    Serial.println("Quit program.");
+    Serial.println(F("Quit program."));
 }
 
 
@@ -570,23 +678,23 @@ int ipow(int base, unsigned int exp)
 }
 
 
-uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max, boolean reverse)
+uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max, boolean reverse, boolean dreverse)
 {
     int     direction;
     int32_t count = *n;
-    direction = read_encoder(&enc) * (reverse ? -1 : 1);
+    direction = read_encoder(&enc);
 
     if (direction) {
         if (read_button(&(enc.btn))) {
-            *digit = clamp(*digit + direction, 0, 5);
+            *digit = clamp(*digit + direction * (dreverse ? -1 : 1), 0, 5);
             #ifdef DEBUG
-            Serial.print("Button press: ");
+            Serial.print(F("Button press: "));
             Serial.println(*digit);
             #endif // DEBUG
         } else {
-            count = clamp(count + direction * ipow(10, *digit), n_min, n_max);
+            count = clamp(count + direction * (reverse ? -1 : 1) * ipow(10, *digit), n_min, n_max);
             #ifdef DEBUG
-            Serial.print("Count: ");
+            Serial.print(F("Count: "));
             Serial.println(count);
             #endif // DEBUG
         }
