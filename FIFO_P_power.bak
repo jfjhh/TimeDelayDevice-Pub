@@ -285,8 +285,6 @@ F 3 "~" H 1150 500 50  0001 C CNN
 $EndComp
 Text GLabel 1100 1800 0    60   Input ~ 0
 V+
-Text GLabel 1100 1900 0    60   Input ~ 0
-GND
 Text GLabel 1100 2000 0    60   Input ~ 0
 +5V
 Text GLabel 1100 2100 0    60   Input ~ 0
@@ -495,4 +493,15 @@ Wire Wire Line
 	1850 2200 1850 2000
 Wire Wire Line
 	1850 2000 2350 2000
+$Comp
+L power:GND #PWR0101
+U 1 1 5D5F232E
+P 1100 1900
+F 0 "#PWR0101" H 1100 1650 50  0001 C CNN
+F 1 "GND" V 1105 1772 50  0000 R CNN
+F 2 "" H 1100 1900 50  0001 C CNN
+F 3 "" H 1100 1900 50  0001 C CNN
+	1    1100 1900
+	0    1    1    0   
+$EndComp
 $EndSCHEMATC
