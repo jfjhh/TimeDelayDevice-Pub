@@ -87,9 +87,9 @@ F 3 "" H 2350 1200 50  0000 C CNN
 	1    2350 1200
 	1    0    0    -1  
 $EndComp
-Text GLabel 4250 2150 0    60   Input ~ 0
+Text GLabel 4250 2100 0    60   Input ~ 0
 WLSTN
-Text GLabel 4250 2050 0    60   Input ~ 0
+Text GLabel 4250 2000 0    60   Input ~ 0
 WCLK_S
 Text GLabel 6300 3650 1    60   Input ~ 0
 RCLK
@@ -1979,6 +1979,8 @@ Wire Wire Line
 	2200 700  2200 1050
 Wire Wire Line
 	4300 1350 4250 1350
+Text GLabel 4350 1600 0    60   Input ~ 0
+CLK_EN
 Wire Bus Line
 	6650 6200 7550 6200
 Wire Bus Line
@@ -1995,4 +1997,6 @@ Wire Bus Line
 	8350 4750 8350 6200
 Wire Bus Line
 	7550 4150 7550 6200
+Text GLabel 4350 2250 0    60   Input ~ 0
+DAC0
 $EndSCHEMATC
