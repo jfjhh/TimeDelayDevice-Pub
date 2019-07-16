@@ -113,4 +113,9 @@ K Voltage Regulator 1A Positive
 F http://www.fairchildsemi.com/ds/LM/LM7805.pdf
 $ENDCMP
 #
+$CMP Rotary_Encoder_61C
+D 4 bits rotary switch
+K Rotary, Hex
+$ENDCMP
+#
 #End Doc Library
