@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name FIFO_P)(type Legacy)(uri ${KIPRJMOD}/FIFO_P.lib)(options "")(descr ""))
+  (lib (name FIFO_P-rescue)(type Legacy)(uri ${KIPRJMOD}/FIFO_P-rescue.lib)(options "")(descr ""))
 )
