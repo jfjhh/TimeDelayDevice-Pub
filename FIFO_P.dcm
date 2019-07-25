@@ -5,6 +5,12 @@ D DC Barrel Jack
 K DC power barrel jack connector
 $ENDCMP
 #
+$CMP DMP3099L
+D -12A Id, -30V Vds, P-Channel Power MOSFET, 9.5mOhm Ron, 33.7nC Qg (typ), PowerDI3333-8
+K P-Channel MOSFET
+F https://www.diodes.com/assets/Datasheets/DMP3013SFV.pdf
+$ENDCMP
+#
 $CMP LM2940CT-3.3
 D Positive 1A 26V Linear Regulator, Fixed Output 5V, TO-220
 K Voltage Regulator 1A Positive
