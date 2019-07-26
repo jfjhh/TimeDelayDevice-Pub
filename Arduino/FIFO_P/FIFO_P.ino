@@ -13,9 +13,14 @@
  ********************************************************************************/
 
 // Code options (feature selection)
-#define SCREEN   // Uncomment to enable screen output
+//#define SCREEN   // Uncomment to enable screen output
 #define SCONTROL // Uncomment for serial control and logging
+#define HISTORY  // Uncomment for FIFO initial state programming (req: SCONTROL)
 #define DEBUG    // Uncomment for serial debug output
+
+#if defined(HIST) && defined(SCONTROL)
+#define HIST
+#endif
 
 #ifdef SCREEN
 #include <Wire.h>
@@ -31,7 +36,7 @@ extern TwoWire Wire1; // Use second I2C pins on the Due
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
-#define OLED_RESET    54 // Reset pin (or -1 if sharing Arduino reset pin)
+#define OLED_RESET    A0 // Reset pin (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, OLED_RESET);
 boolean screen = true;
 boolean draw   = true;
@@ -101,16 +106,23 @@ typedef struct {
 } rotary_encoder;
 
 // FIFO word limits
-const uint32_t min_words  = 3;
-const uint32_t max_words  = 262144;
-const uint32_t init_words = 10;
+const uint32_t min_words  = 3; // FIFO
+const uint32_t max_words  = 262144; // FIFO
+const uint32_t off_words  = 3 + 2; // ADC + DAC conversion.
+const uint32_t init_words = 10; // FIFO + offset (user-visible)
+
+#ifdef HIST
+// History programming buffer
+#define HIST_SIZE   1024 // Make hist relatively large, given SRAM limitations
+uint16_t hist[HIST_SIZE];
+#endif // HIST
 
 // Rotary encoder pin mapping
 rotary_encoder enc = {
-    .a   = 51,
-    .b   = 48,
+    .a   = 48, // ENC_A pin
+    .b   = 50, // ENC_B pin
     .btn = {
-        .p = 46,
+        .p = 52, // ENC_BTN pin
         .debounce_delay = 50,
         .state = 0,
         .last_state = 0,
@@ -125,23 +137,30 @@ int32_t  count_min = min_words;
 int32_t  count_max = max_words;
 int32_t  count_mul = 1000;
 
-// FIFO pin mapping
-pin RT    = 53;
-pin OE    = 52;
-pin REN   = 50;
-pin OR    = 49;
-pin PAE   = 47;
-pin HF    = 40;
+// FIFO pin mappings:
+// Active LOW unless stated otherwise
+pin RT    = 42;
+pin OE    = 45;
+pin REN   = 43;
+pin OR    = 40;
+pin PAE   = 41;
+pin HF    = 38;
 pin PAF   = 39;
-pin FWFT  = 37;
+pin FWFT  = 37; // FWFT/SI. Active HIGH
 pin IR    = 36;
 pin LD    = 34;
 pin MRS   = 35;
 pin PRS   = 32;
 pin WEN   = 31;
 pin SEN   = 30;
-pin WLSTN = 29;
-pin WCLK  = 28;
+
+// Clock control pin mappings:
+// Active HIGH unless stated otherwise
+pin nPROG  = 22;
+pin CLK1   = 26; // 1CLK (single-clock operation)
+pin WCLK_S = 24;
+pin ADC_CLK_S = 28;
+pin PROG_D = DAC1;
 
 // FIFO flags to show in status. All active low.
 enum fifo_flag {
@@ -170,15 +189,14 @@ const PROGMEM char fifo_flag_names[][16] = {
 };
 
 // DAC pin mapping
-pin DAC_LDAC = 26;
-pin DAC_CS   = 24;
-
-// Clock enabling (for DAC setup)
-pin CLK_EN = 23; // C'est le Bodge Nouveau
+pin DAC_LDAC = 46;
+pin DAC_CS   = 44;
 
 // Serial command buffer
-#define SBLEN  16
+#ifdef SCONTROL
+#define SBLEN   16
 char sb[SBLEN];
+#endif // SCONTROL
 
 
 void setup(void)
@@ -194,42 +212,55 @@ void setup(void)
 
     // DAC initialization
     delay(10);
-    digitalWrite(CLK_EN, LOW);
+    digitalWrite(nPROG, LOW); // x. Check not flipped
     digitalWrite(DAC_LDAC, HIGH);
     delay(5);
-    digitalWrite(CLK_EN, HIGH);
+    digitalWrite(nPROG, HIGH); // x.
     digitalWrite(DAC_LDAC, LOW);
 
+    // Due (self) DAC initialization
+    analogWriteResolution(12);
+    pinMode(PROG_D, OUTPUT);
+    analogWrite(PROG_D, 1u << (12 - 2); // Half full scale
+
+    // Clock control pins
+    pinMode(nPROG,     OUTPUT);
+    pinMode(CLK1,      OUTPUT);
+    pinMode(WCLK_S,    OUTPUT);
+    pinMode(ADC_CLK_S, OUTPUT);
+
+    // Clock default state (single clock, not programming)
+    digitalWrite(CLK1,      HIGH);
+    digitalWrite(nPROG,     HIGH);
+    digitalWrite(WCLK_S,    LOW);
+    digitalWrite(ADC_CLK_S, LOW);
+
     // FIFO pins
-    pinMode(REN,   INPUT);
-    pinMode(OR,    INPUT_PULLUP);
-    pinMode(PAE,   INPUT_PULLUP);
-    pinMode(HF,    INPUT_PULLUP);
-    pinMode(PAF,   INPUT_PULLUP);
-    pinMode(IR,    INPUT_PULLUP);
-    pinMode(OE,    OUTPUT);
-    pinMode(RT,    OUTPUT);
-    pinMode(FWFT,  OUTPUT);
-    pinMode(LD,    OUTPUT);
-    pinMode(MRS,   OUTPUT);
-    pinMode(PRS,   OUTPUT);
-    pinMode(WCLK,  OUTPUT);
-    pinMode(WEN,   OUTPUT);
-    pinMode(SEN,   OUTPUT);
-    pinMode(WLSTN, OUTPUT);
+    pinMode(REN,  OUTPUT);
+    pinMode(OR,   INPUT_PULLUP);
+    pinMode(PAE,  INPUT_PULLUP);
+    pinMode(HF,   INPUT_PULLUP);
+    pinMode(PAF,  INPUT_PULLUP);
+    pinMode(IR,   INPUT_PULLUP);
+    pinMode(OE,   OUTPUT);
+    pinMode(RT,   OUTPUT);
+    pinMode(FWFT, OUTPUT);
+    pinMode(LD,   OUTPUT);
+    pinMode(MRS,  OUTPUT);
+    pinMode(PRS,  OUTPUT);
+    pinMode(WEN,  OUTPUT);
+    pinMode(SEN,  OUTPUT);
 
     // FIFO default states
-    digitalWrite(MRS,   HIGH);
-    digitalWrite(PRS,   HIGH);
-    digitalWrite(RT,    HIGH);
-    digitalWrite(FWFT,  HIGH);
-    digitalWrite(LD,    HIGH);
-    digitalWrite(WEN,   HIGH);
-    digitalWrite(REN,   HIGH);
-    digitalWrite(SEN,   HIGH);
-    digitalWrite(OE,    LOW);
-    digitalWrite(WCLK,  LOW);
-    digitalWrite(WLSTN, LOW);
+    digitalWrite(MRS,  HIGH);
+    digitalWrite(PRS,  HIGH);
+    digitalWrite(RT,   HIGH);
+    digitalWrite(FWFT, HIGH);
+    digitalWrite(LD,   HIGH);
+    digitalWrite(WEN,  HIGH);
+    digitalWrite(REN,  HIGH);
+    digitalWrite(SEN,  HIGH);
+    digitalWrite(OE,   LOW);
 
     // DAC pins
     delay(100);
@@ -292,15 +323,16 @@ void setup(void)
 
 void loop(void)
 {
-    unsigned long narg;
+    uint32_t narg;
 
+    #ifdef SCONTROL
     for (int i = 0; i < SBLEN; i++)
         sb[i] = '\0';
 
     if (Serial.available() > 0) {
         Serial.readBytesUntil('*', sb, SBLEN);
         
-        narg = atol(sb + 1);
+        narg = atol(sb + 2);
         switch (sb[0]) {
             case 'h': // Fallthrough.
             case 'H': // Fallthrough.
@@ -312,21 +344,24 @@ void loop(void)
                     unknown();
                 break;
             case 'p':
-                if(sb[1] == 'r')
-                    partial_reset();
-                else
-                    unknown();
+                switch (sb[1]) {
+                    case 'r': partial_reset(); break;
+                    #ifdef HIST
+                    case 'h': prog_hist(narg); break;
+                    #endif // HIST
+                    default:  unknown(); break;
+                }
                 break;
             case 'd': set_delay(narg); break;
             case 's': report_status(); break;
             case 'x': pause(narg); break;
             case 'i': initialize(); break;
             case 'q': quit(); break;
-            default:
-                unknown();
+            default:  unknown(); break;
                 
         }
     }
+    #endif // SCONTROL
 
     #ifdef SCREEN
     if (screen) {
@@ -371,7 +406,7 @@ void loop(void)
                     draw |= millis() - last_update >= update_interval;
                     if (draw) {
                         display.clearDisplay();
-                        sprintf(s_digits, "%06u", words);
+                        sprintf(s_digits, "%06u", words + off_words);
                         display.setFont(DIGIT_FONT);
                         display.setCursor(digit_x, digit_y);
                         display.print(s_digits);
@@ -467,37 +502,45 @@ void press_menu_return(rotary_encoder *e)
 }
 #endif // SCREEN
 
+#ifdef SCONTROL
 void unknown(void)
 {
     Serial.println(F("Unknown Command. Type 'h' for help."));
     serial_help();
 }
+#endif // SCONTROL
 
 
+#ifdef SCONTROL
 void serial_help(void)
 {
     Serial.print(F(
-            "Time Delay Device Serial Commands\n"
-            "=================================\n"
-            "mr\tPerforms a master reset of FIFO memory.\n"
-            "pr\tPerforms a partial reset of FIFO memory.\n"
-            "d N\tSets delay to N words, where N is a decimal number between "));
-    Serial.print(min_words, DEC);
+                "Time Delay Device Serial Commands\n"
+                "=================================\n"
+                "mr\tPerforms a master reset of FIFO memory.\n"
+                "pr\tPerforms a partial reset of FIFO memory.\n"
+                "d N\tSets delay to N words, where N is a decimal number between "));
+    Serial.print(min_words + off_words, DEC);
     Serial.print(F(" and "));
-    Serial.print(max_words, DEC);
+    Serial.print(max_words + off_words, DEC);
     Serial.print(F(
-            ".\n"
-            "\tE.g.: 'D3' and 'D100' produce delays of 3 and 100 words, respectively.\n"
-            "\tValues outside this range will be clamped, so 'D0' is the same as 'D3'.\n"
-            "\t<time delay> = <delay words> * <clock period>.\n"
-            "s\tReports FIFO status.\n"
-            "x N\tPauses for N seconds (neglecting serial delays; not precise).\n"
-            "i\tInitializes the program.\n"
-            "q\tQuits the program.\n"
-            "h H ?\tShows this help.\n"
-            "\n"
-            ));
+                ".\n"
+                "\tE.g.: 'd 9' and 'd 101' produce delays of 9 and 101 words, respectively.\n"
+                "\tValues outside the possible range will be clamped, so 'd 0' is the same as 'd "
+                ));
+    Serial.print(min_words + off_words, DEC);
+    Serial.print(F(
+                "'.\n"
+                "\t<time delay> = <delay words> * <clock period>.\n"
+                "s\tReports FIFO status.\n"
+                "x N\tPauses for N seconds (neglecting serial delays; not precise).\n"
+                "i\tInitializes the program.\n"
+                "q\tQuits the program.\n"
+                "h H ?\tShows this help.\n"
+                "\n"
+                ));
 }
+#endif // SCONTROL
 
 
 void partial_reset(void)
@@ -505,7 +548,7 @@ void partial_reset(void)
     long t1, t2;
     Serial.print(F("Partial Reset ... "));
     t1 = micros();
-    digitalWrite(WLSTN, HIGH);
+    digitalWrite(nPROG, LOW);
     delay(1);
     
     digitalWrite(REN, HIGH);
@@ -517,7 +560,7 @@ void partial_reset(void)
     digitalWrite(PRS, HIGH);
     delayMicroseconds(3);
     digitalWrite(WEN, LOW);
-    digitalWrite(WLSTN, LOW);
+    digitalWrite(nPROG, HIGH);
     
     t2 = micros() - t1;
     delayMicroseconds(1);
@@ -564,7 +607,7 @@ void report_status(void)
 
     #ifdef DEBUG
     Serial.println(words_digit);
-    Serial.println(words);
+    Serial.println(words + off_words);
     Serial.println(ipow(3, 0));
     Serial.println(ipow(3, 1));
     Serial.println(ipow(3, 5));
@@ -574,9 +617,9 @@ void report_status(void)
 
 
 #ifdef SCONTROL
-void pause(unsigned int n)
+void pause(uint32_t n)
 {
-    for (int i = 0; i < n; i++) {
+    for (uint32_t i = 0; i < n; i++) {
         Serial.println(n - i);
         delay(1000);
     }
@@ -585,12 +628,12 @@ void pause(unsigned int n)
 #endif // SCONTROL
 
 
-void set_delay(unsigned int n)
+void set_delay(uint32_t n)
 {
     unsigned int m;
     int bits;
     
-    n = clamp(n, min_words, max_words);
+    n = clamp(n - off_words, min_words, max_words);
     if (n == words) return;
     words = n;
     m = max_words - n;
@@ -598,10 +641,10 @@ void set_delay(unsigned int n)
     Serial.print(F("Sending a "));
     Serial.print(n);
     Serial.print(F("-word delay ... "));
-    digitalWrite(WLSTN, 1);
+    digitalWrite(nPROG, 0);
     delayMicroseconds(10);
 
-    digitalWrite(WCLK, 0);
+    digitalWrite(WCLK_S, 0);
     digitalWrite(LD, 0);
     digitalWrite(SEN, 0);
     delayMicroseconds(2);
@@ -612,14 +655,14 @@ void set_delay(unsigned int n)
         bits = i == 0 ? 1 : bitRead(m, i - 18);
         digitalWrite(FWFT, bits);
         delayMicroseconds(1);
-        digitalWrite(WCLK, 1);
+        digitalWrite(WCLK_S, 1);
         delayMicroseconds(1);
-        digitalWrite(WCLK, 0);
+        digitalWrite(WCLK_S, 0);
     }
 
     digitalWrite(LD, 1);
     digitalWrite(SEN, 1);
-    digitalWrite(WLSTN, 0);
+    digitalWrite(nPROG, 1);
     Serial.print(F("done. Resetting: "));
     partial_reset();
 }
@@ -741,3 +784,16 @@ int read_button(button *button)
     
     return button->last_state = reading;
 }
+
+
+#ifdef HIST
+int prog_hist(uint32_t n)
+{
+    // Reads n code words (uint16_t values for DAC) and programs them into the
+    // FIFO memory.
+
+    // TODO
+    return 0;
+}
+#endif // HIST
+
