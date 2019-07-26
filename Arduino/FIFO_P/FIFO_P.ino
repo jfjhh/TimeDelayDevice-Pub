@@ -18,7 +18,7 @@
 #define HISTORY  // Uncomment for FIFO initial state programming (req: SCONTROL)
 #define DEBUG    // Uncomment for serial debug output
 
-#if defined(HIST) && defined(SCONTROL)
+#if defined(HISTORY) && defined(SCONTROL)
 #define HIST
 #endif
 
@@ -113,8 +113,8 @@ const uint32_t init_words = 10; // FIFO + offset (user-visible)
 
 #ifdef HIST
 // History programming buffer
-#define HIST_SIZE   1024 // Make hist relatively large, given SRAM limitations
-uint16_t hist[HIST_SIZE];
+#define HIST_SIZE   512 // Make hist relatively large, given SRAM limitations
+byte hist[2*HIST_SIZE]; // HIST_SIZE code words, so 2*HIST_SIZE bytes.
 #endif // HIST
 
 // Rotary encoder pin mapping
@@ -202,11 +202,14 @@ char sb[SBLEN];
 void setup(void)
 {
     // Serial communication
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.print(F(
         "===================\n"
         " Time Delay Device \n"
         "===================\n"
+        #ifdef HIST
+        "HIST\n"
+        #endif // HIST
         "Type 'h' for help.\n"
         "Setting up I/O ... "));
 
@@ -221,7 +224,7 @@ void setup(void)
     // Due (self) DAC initialization
     analogWriteResolution(12);
     pinMode(PROG_D, OUTPUT);
-    analogWrite(PROG_D, 1u << (12 - 2); // Half full scale
+    analogWrite(PROG_D, 1u << (12 - 2)); // Half full scale
 
     // Clock control pins
     pinMode(nPROG,     OUTPUT);
@@ -264,7 +267,7 @@ void setup(void)
 
     // DAC pins
     delay(100);
-    pinMode(CLK_EN,   OUTPUT);
+    pinMode(nPROG,    OUTPUT);
     pinMode(DAC_LDAC, OUTPUT);
     pinMode(DAC_CS,   OUTPUT);
 
@@ -330,7 +333,7 @@ void loop(void)
         sb[i] = '\0';
 
     if (Serial.available() > 0) {
-        Serial.readBytesUntil('*', sb, SBLEN);
+        Serial.readBytesUntil(';', sb, SBLEN);
         
         narg = atol(sb + 2);
         switch (sb[0]) {
@@ -801,10 +804,25 @@ int prog_hist(uint32_t n)
 
     while (!Serial.available());
 
-    Serial.readBytesUntil(~0u, &hist, HIST_SIZE);
-
-    for (size_t j = 0; j < HIST_SIZE; j++) {
-        Serial.print(hist[j]);
+    Serial.readBytes(hist, HIST_SIZE);
+    size_t col = 8;
+    size_t cols = 4;
+    size_t row = col * cols;
+    char hex[16];
+    for (size_t j = 0; j < HIST_SIZE / row; j++) {
+        sprintf(hex, "%04X:\t", j * row);
+        Serial.print(hex);
+        for (size_t k = 0; k < row; k++) {
+            sprintf(hex, "%02X", hist[row*j + k]);
+            Serial.print(hex);
+            if (k % col == col - 1) Serial.print(' ');
+        }
+        Serial.print('\t');
+        for (size_t k = 0; k < row; k++) {
+            byte b = hist[row*j + k];
+            Serial.print(b < 32 ? '.' : (char) b);
+        }
+        Serial.println();
     }
 
     return 0;
@@ -812,4 +830,3 @@ int prog_hist(uint32_t n)
 #endif // HIST
 
 // vim:ts=4:sts=4:sw=4:et:
-
