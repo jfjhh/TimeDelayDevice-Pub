@@ -792,8 +792,24 @@ int prog_hist(uint32_t n)
     // Reads n code words (uint16_t values for DAC) and programs them into the
     // FIFO memory.
 
-    // TODO
+    size_t bufs = n / HIST_SIZE; // From 0
+    size_t buf  = 0u;
+    size_t i    = 0u;
+
+    for (size_t j = 0; j < HIST_SIZE; j++)
+        hist[j] = 0u;
+
+    while (!Serial.available());
+
+    Serial.readBytesUntil(~0u, &hist, HIST_SIZE);
+
+    for (size_t j = 0; j < HIST_SIZE; j++) {
+        Serial.print(hist[j]);
+    }
+
     return 0;
 }
 #endif // HIST
+
+// vim:ts=4:sts=4:sw=4:et:
 
