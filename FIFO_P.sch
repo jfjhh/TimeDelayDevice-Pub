@@ -563,7 +563,7 @@ Wire Wire Line
 	5350 6100 5350 5950
 Connection ~ 4350 6200
 Text Notes 10750 7850 0    60   ~ 0
-B
+P3 (C)
 Wire Wire Line
 	6400 4300 6400 4250
 Wire Wire Line
