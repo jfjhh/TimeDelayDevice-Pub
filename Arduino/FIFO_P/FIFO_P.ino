@@ -113,8 +113,8 @@ const uint32_t init_words = 10; // FIFO + offset (user-visible)
 
 #ifdef HIST
 // History programming buffer
-#define HIST_SIZE   512 // Make hist relatively large, given SRAM limitations
-byte hist[2*HIST_SIZE]; // HIST_SIZE code words, so 2*HIST_SIZE bytes.
+#define HBUF_SIZE   16 // Make hist relatively large, given SRAM limitations
+byte hist[HBUF_SIZE];  // Holds (HBUF_SIZE / 2) code words (uint16_t)
 #endif // HIST
 
 // Rotary encoder pin mapping
@@ -161,6 +161,7 @@ pin CLK1   = 26; // 1CLK (single-clock operation)
 pin WCLK_S = 24;
 pin ADC_CLK_S = 28;
 pin PROG_D = DAC1;
+pin STRIG  = 33;
 
 // FIFO flags to show in status. All active low.
 enum fifo_flag {
@@ -204,14 +205,34 @@ void setup(void)
     // Serial communication
     Serial.begin(115200);
     Serial.print(F(
-        "===================\n"
-        " Time Delay Device \n"
-        "===================\n"
+        "====================\n"
+        " FIFO_P3 Time Delay \n"
+        "====================\n"
+        "    Reed College    \n"
+        " Physics Department \n"
+        "        2019        \n"   
+        "====================\n"
+        "    Alex Striff     \n"
+        "    Edgar Perez     \n"
+        "    Lucas Illing    \n"
+        "====================\n"
+        "Enabled features: "
+        #ifdef DEBUG
+        "DEBUG "
+        #endif // DEBUG
+        #ifdef SCREEN
+        "SCREEN "
+        #endif // SCREEN
+        #ifdef SCONTROL
+        "SCONTROL "
+        #endif // SCONTROL
         #ifdef HIST
-        "HIST\n"
+        "HIST "
         #endif // HIST
-        "Type 'h' for help.\n"
-        "Setting up I/O ... "));
+        "\n"
+        "Type 'h' for help.\n\n"
+        "Setting up I/O ... "
+        ));
 
     // DAC initialization
     delay(10);
@@ -231,12 +252,15 @@ void setup(void)
     pinMode(CLK1,      OUTPUT);
     pinMode(WCLK_S,    OUTPUT);
     pinMode(ADC_CLK_S, OUTPUT);
+    pinMode(STRIG,     OUTPUT);
 
     // Clock default state (single clock, not programming)
     digitalWrite(CLK1,      HIGH);
-    digitalWrite(nPROG,     HIGH);
     digitalWrite(WCLK_S,    LOW);
     digitalWrite(ADC_CLK_S, LOW);
+    digitalWrite(STRIG,     LOW);
+
+    digitalWrite(nPROG, HIGH); // Disable operation while setting up.
 
     // FIFO pins
     pinMode(REN,  OUTPUT);
@@ -318,9 +342,9 @@ void setup(void)
     // Do a master reset to initialize the FIFO
     Serial.print(F(" complete. Initializing FIFO:\n\t"));
     delay(5);
-    master_reset();
+    master_reset(false);
     Serial.println();
-    set_delay(init_words);
+    set_delay(init_words, true);
 }
 
 
@@ -332,6 +356,8 @@ void loop(void)
     for (int i = 0; i < SBLEN; i++)
         sb[i] = '\0';
 
+    // TODO: Add commands to change single/double clock.
+    // TODO: Update help.
     if (Serial.available() > 0) {
         Serial.readBytesUntil(';', sb, SBLEN);
         
@@ -341,21 +367,27 @@ void loop(void)
             case 'H': // Fallthrough.
             case '?': serial_help(); break;
             case 'm':
-                if(sb[1] == 'r')
-                    master_reset();
-                else
-                    unknown();
+                switch (sb[1]) {
+                    case 'r': master_reset(true); break;
+                    default:  unknown(); break;
+                }
                 break;
             case 'p':
                 switch (sb[1]) {
-                    case 'r': partial_reset(); break;
+                    case 'r': partial_reset(true); break;
                     #ifdef HIST
                     case 'h': prog_hist(narg); break;
                     #endif // HIST
                     default:  unknown(); break;
                 }
                 break;
-            case 'd': set_delay(narg); break;
+            case 'd': set_delay(narg, true); break;
+            case 'g':
+                switch (sb[1]) {
+                    case 'o': start(); break;
+                    default:  unknown(); break;
+                }
+                break;
             case 's': report_status(); break;
             case 'x': pause(narg); break;
             case 'i': initialize(); break;
@@ -535,6 +567,10 @@ void serial_help(void)
     Serial.print(F(
                 "'.\n"
                 "\t<time delay> = <delay words> * <clock period>.\n"
+                "ph N;<data>\tPrograms N words of initial history into the FIFO.\n"
+                "\tAfter the semicolon, 2N bytes of big-endian data must follow.\n"
+                "\tThe data are 12-bit unsigned code words representing analog signals,\n"
+                "\twhere 0x0000 gives -2.5V and 0x0FFF gives +2.5V.\n"
                 "s\tReports FIFO status.\n"
                 "x N\tPauses for N seconds (neglecting serial delays; not precise).\n"
                 "i\tInitializes the program.\n"
@@ -546,7 +582,7 @@ void serial_help(void)
 #endif // SCONTROL
 
 
-void partial_reset(void)
+void partial_reset(boolean start)
 {
     long t1, t2;
     Serial.print(F("Partial Reset ... "));
@@ -563,7 +599,7 @@ void partial_reset(void)
     digitalWrite(PRS, HIGH);
     delayMicroseconds(3);
     digitalWrite(WEN, LOW);
-    digitalWrite(nPROG, HIGH);
+    if (start) digitalWrite(nPROG, HIGH);
     
     t2 = micros() - t1;
     delayMicroseconds(1);
@@ -573,16 +609,18 @@ void partial_reset(void)
 }
 
 
-void master_reset(void)
+void master_reset(boolean start)
 {
     long t1, t2;
     Serial.print(F("Master Reset ... "));
     t1 = micros();
-    digitalWrite(FWFT, HIGH);
-    digitalWrite(LD,   HIGH);
-    digitalWrite(MRS,  LOW);
+    digitalWrite(nPROG, LOW);
+    digitalWrite(FWFT,  HIGH);
+    digitalWrite(LD,    HIGH);
+    digitalWrite(MRS,   LOW);
     delayMicroseconds(1);
     digitalWrite(MRS, HIGH);
+    if (start) digitalWrite(nPROG, HIGH);
     
     t2 = micros() - t1;
     delayMicroseconds(1);
@@ -631,7 +669,7 @@ void pause(uint32_t n)
 #endif // SCONTROL
 
 
-void set_delay(uint32_t n)
+void set_delay(uint32_t n, boolean start)
 {
     unsigned int m;
     int bits;
@@ -667,7 +705,13 @@ void set_delay(uint32_t n)
     digitalWrite(SEN, 1);
     digitalWrite(nPROG, 1);
     Serial.print(F("done. Resetting: "));
-    partial_reset();
+    partial_reset(start);
+}
+
+
+void set_fifo_delay(uint32_t n, boolean start)
+{
+    set_delay(n + off_words, start);
 }
 
 
@@ -793,39 +837,112 @@ int read_button(button *button)
 int prog_hist(uint32_t n)
 {
     // Reads n code words (uint16_t values for DAC) and programs them into the
-    // FIFO memory.
-
-    size_t bufs = n / HIST_SIZE; // From 0
-    size_t buf  = 0u;
-    size_t i    = 0u;
-
-    for (size_t j = 0; j < HIST_SIZE; j++)
-        hist[j] = 0u;
-
-    while (!Serial.available());
-
-    Serial.readBytes(hist, HIST_SIZE);
+    // FIFO memory. Big-endian.
+    size_t nwords = n;
+    n *= 2; // Words to bytes.
+    size_t bufs = 0u;
+    uint32_t bytes = 0u;
     size_t col = 8;
-    size_t cols = 4;
+    size_t cols = 2;
     size_t row = col * cols;
     char hex[16];
-    for (size_t j = 0; j < HIST_SIZE / row; j++) {
-        sprintf(hex, "%04X:\t", j * row);
-        Serial.print(hex);
-        for (size_t k = 0; k < row; k++) {
-            sprintf(hex, "%02X", hist[row*j + k]);
-            Serial.print(hex);
-            if (k % col == col - 1) Serial.print(' ');
-        }
-        Serial.print('\t');
-        for (size_t k = 0; k < row; k++) {
-            byte b = hist[row*j + k];
-            Serial.print(b < 32 ? '.' : (char) b);
-        }
-        Serial.println();
-    }
+    byte msb, lsb;
+    uint16_t data;
+    size_t read_bytes;
+    size_t buf_remaining;
+    size_t adc_off = 3u;
+    size_t adc_ins = 0u;
 
-    return 0;
+    // Enter programming mode.
+    digitalWrite(nPROG, LOW);
+    digitalWrite(STRIG, LOW);
+    Serial.print(F("Programming "));
+    Serial.print(nwords, DEC);
+    Serial.print(F(" words of history...\n\n"));
+    master_reset(false);
+    set_fifo_delay(nwords, false);
+
+    // Program the data one hist[] buffer at a time.
+    while (bytes < n) {
+        while (!Serial.available());
+        
+        buf_remaining = min(HBUF_SIZE, n - bytes);
+        read_bytes = Serial.readBytes(hist, buf_remaining);
+        bytes += read_bytes;
+        boolean last = read_bytes < HBUF_SIZE;
+        
+        if (read_bytes != buf_remaining) {
+            Serial.print(F("Error reading history data! (Received "));
+            Serial.print(bytes, DEC);
+            Serial.print(F(" bytes, but expected "));
+            Serial.print(n, DEC);
+            Serial.println(F(" bytes.)"));
+            return 0;
+        }
+
+        digitalWrite(ADC_CLK_S, LOW);
+        digitalWrite(WCLK_S, LOW);
+        for (size_t j = 0; j < (read_bytes / row) + (last ? 1 : 0); j++) {
+            size_t end_bytes = last ? read_bytes % row : row;
+
+            // The actual programming
+            for (size_t k = 0; k < end_bytes; k++) {
+                if (k % 2 == 0) {
+                    msb = hist[row*j + k];
+                } else {
+                    lsb = hist[row*j + k];
+                    data = (msb << 8) | lsb;
+                    analogWrite(PROG_D, data);
+                    
+                    // Write ADC output N-3 to the FIFO before latching in
+                    // the next in put to the ADC.
+                    if (adc_ins >= adc_off) digitalWrite(WCLK_S, HIGH);
+                    delayMicroseconds(1); // Maybe unnecessary. Check clock hold times.
+                    digitalWrite(ADC_CLK_S, HIGH);
+                    if (adc_ins >= adc_off) digitalWrite(WCLK_S, LOW);
+                    digitalWrite(ADC_CLK_S, LOW);
+                    if (adc_ins < adc_off) adc_ins++;
+                }
+            }
+            // The last 3 (adc_off) history data words remain in the ADC.
+            // They will be clocked in after the switch to normal operation (external WCLK).
+
+            // Printing a hexdump back
+            sprintf(hex, "%04X:\t", bufs * HBUF_SIZE + j * row);
+            Serial.print(hex);
+            for (size_t k = 0; k < end_bytes; k++) {
+                sprintf(hex, "%02X", hist[row*j + k]);
+                Serial.print(hex);
+                if (k % col == col - 1) Serial.print(' ');
+            }
+            if (last) { // Pad last row
+                for (size_t k = 0; k < 2 * (row - end_bytes); k++)
+                    Serial.print(' ');
+            }
+            Serial.print('\t');
+            for (size_t k = 0; k < end_bytes; k++) {
+                byte b = hist[row*j + k];
+                Serial.print(b < 32 ? '.' : (char) b);
+            }
+            Serial.println();
+        }
+        
+        bufs++;
+    }
+    Serial.println(F("\nDone programming history. Waiting for start command ('go')."));
+
+    return 1;
+}
+#endif // HIST
+
+
+#ifdef HIST
+void start()
+{
+    // Start normal delay operation after programming the history.
+    digitalWrite(nPROG, HIGH);
+    digitalWrite(STRIG, HIGH);
+    Serial.print(F("Started."));
 }
 #endif // HIST
 
