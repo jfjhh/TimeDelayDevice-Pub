@@ -563,7 +563,7 @@ Wire Wire Line
 	5350 6100 5350 5950
 Connection ~ 4350 6200
 Text Notes 10750 7850 0    60   ~ 0
-P3 (C)
+P3
 Wire Wire Line
 	6400 4300 6400 4250
 Wire Wire Line
@@ -3341,4 +3341,6 @@ Wire Bus Line
 	7950 4500 7950 5550
 Wire Bus Line
 	7550 4150 7550 6200
+Text Notes 10900 7700 0    60   ~ 0
+Alex Striff
 $EndSCHEMATC
