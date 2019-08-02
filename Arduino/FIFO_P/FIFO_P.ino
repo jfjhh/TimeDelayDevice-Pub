@@ -13,7 +13,7 @@
  ********************************************************************************/
 
 // Code options (feature selection)
-//#define SCREEN   // Uncomment to enable screen output
+#define SCREEN   // Uncomment to enable screen output
 #define SCONTROL // Uncomment for serial control and logging
 #define HISTORY  // Uncomment for FIFO initial state programming (req: SCONTROL)
 #define DEBUG    // Uncomment for serial debug output
@@ -382,12 +382,14 @@ void loop(void)
                 }
                 break;
             case 'd': set_delay(narg, true); break;
+            #ifdef HIST
             case 'g':
                 switch (sb[1]) {
                     case 'o': start(); break;
                     default:  unknown(); break;
                 }
                 break;
+            #endif // HIST
             case 's': report_status(); break;
             case 'x': pause(narg); break;
             case 'i': initialize(); break;
@@ -432,7 +434,7 @@ void loop(void)
               
             case DELAY:
                 { // Surrounding block to disambiguate scope
-                    set_delay(enc_adjust(&words, &words_digit, count_min, count_max, false, false));
+                    set_delay(enc_adjust(&words, &words_digit, count_min, count_max, false, false), true);
                     int16_t  x, y;
                     uint16_t w, h;
                     int16_t digit_x = 0;
@@ -794,7 +796,7 @@ uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max
         #endif // SCREEN
     }
 
-    return (uint32_t) count;
+    return (uint32_t) count + off_words;
 }
 
 
