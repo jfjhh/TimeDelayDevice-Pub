@@ -106,10 +106,14 @@ typedef struct {
 } rotary_encoder;
 
 // FIFO word limits
-const uint32_t min_words  = 3; // FIFO
-const uint32_t max_words  = 262144; // FIFO
-const uint32_t off_words  = 3 + 2; // ADC + DAC conversion.
-const uint32_t init_words = 10; // FIFO + offset (user-visible)
+// min_words = 1 or 2 give the same delay.
+// min_words = 3 is off-by-one depending upon the clock.
+// FIFO words:  0        1  2  3     4   5  ...
+// Delay words: invalid  8  8  9,10  11  12 ...
+const uint32_t min_words  = 4; // FIFO flags
+const uint32_t max_words  = 262144; // FIFO flags
+const uint32_t off_words  = 3 + 2 + 2; // ADC + DAC + FIFO.
+const uint32_t init_words = 100; // FIFO + offset (user-visible)
 
 #ifdef HIST
 // History programming buffer
@@ -375,6 +379,7 @@ void loop(void)
             case 'p':
                 switch (sb[1]) {
                     case 'r': partial_reset(true); break;
+                    case 'p': digitalWrite(nPROG, LOW); break;
                     #ifdef HIST
                     case 'h': prog_hist(narg); break;
                     #endif // HIST
@@ -390,6 +395,13 @@ void loop(void)
                 }
                 break;
             #endif // HIST
+            case 'c':
+                switch (sb[1]) {
+                    case '1': single_clock(); break;
+                    case '2': dual_clock(); break;
+                    default:  unknown(); break;
+                }
+                break;
             case 's': report_status(); break;
             case 'x': pause(narg); break;
             case 'i': initialize(); break;
@@ -947,5 +959,21 @@ void start()
     Serial.print(F("Started."));
 }
 #endif // HIST
+
+
+#ifdef SCONTROL
+void single_clock(void)
+{
+    digitalWrite(CLK1, HIGH);
+}
+#endif // SCONTROL
+
+
+#ifdef SCONTROL
+void dual_clock(void)
+{
+    digitalWrite(CLK1, LOW);
+}
+#endif // SCONTROL
 
 // vim:ts=4:sts=4:sw=4:et:
