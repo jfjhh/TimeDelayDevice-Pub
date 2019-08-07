@@ -379,7 +379,7 @@ void loop(void)
             case 'p':
                 switch (sb[1]) {
                     case 'r': partial_reset(true); break;
-                    case 'p': digitalWrite(nPROG, LOW); break;
+                    case 'p': prog_debug(); break;
                     #ifdef HIST
                     case 'h': prog_hist(narg); break;
                     #endif // HIST
@@ -975,5 +975,29 @@ void dual_clock(void)
     digitalWrite(CLK1, LOW);
 }
 #endif // SCONTROL
+
+
+void prog_debug(void)
+{
+    uint32_t nwords = 1 << 13;
+    digitalWrite(nPROG, LOW);
+    digitalWrite(STRIG, LOW);
+    Serial.print(F("DEBUG: Programming "));
+    Serial.print(nwords, DEC);
+    Serial.print(F(" words of history...\n\n"));
+    master_reset(false);
+    set_fifo_delay(nwords, false);
+    digitalWrite(nPROG, LOW);
+    delayMicroseconds(10);
+    // Does not account for first three words into ADC, but OK for debugging
+    for (uint16_t triangle = 0u; triangle < nwords; triangle++) {
+        analogWrite(PROG_D, 16*triangle); // high 4 bits are discarded
+        digitalWrite(WCLK_S, HIGH);
+        digitalWrite(WCLK_S, LOW);
+        digitalWrite(ADC_CLK_S, HIGH);
+        digitalWrite(ADC_CLK_S, LOW);
+    }
+    Serial.println(F("\nDEBUG: Done programming history. Waiting for start command ('go')."));
+}
 
 // vim:ts=4:sts=4:sw=4:et:
