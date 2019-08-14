@@ -20,6 +20,7 @@
 
 #if defined(HISTORY) && defined(SCONTROL)
 #define HIST
+#include <CRC32.h>
 #endif
 
 #ifdef SCREEN
@@ -379,7 +380,10 @@ void loop(void)
             case 'p':
                 switch (sb[1]) {
                     case 'r': partial_reset(true); break;
+                    #ifdef DEBUG
                     case 'p': prog_debug(); break;
+                    case 'c': prog_clock_debug(); break;
+                    #endif // DEBUG
                     #ifdef HIST
                     case 'h': prog_hist(narg); break;
                     #endif // HIST
@@ -689,7 +693,7 @@ void set_delay(uint32_t n, boolean start)
     int bits;
     
     n = clamp(n - off_words, min_words, max_words);
-    if (n == words) return;
+    if (n == words && start) return;
     words = n;
     m = max_words - n;
     
@@ -851,21 +855,22 @@ int read_button(button *button)
 int prog_hist(uint32_t n)
 {
     // Reads n code words (uint16_t values for DAC) and programs them into the
-    // FIFO memory. Big-endian.
-    size_t nwords = n;
+    // FIFO memory. Little-endian.
+    uint32_t nwords = n;
     n *= 2; // Words to bytes.
-    size_t bufs = 0u;
+    uint32_t bufs = 0u;
     uint32_t bytes = 0u;
-    size_t col = 8;
-    size_t cols = 2;
-    size_t row = col * cols;
+    uint32_t col = 8;
+    uint32_t cols = 2;
+    uint32_t row = col * cols;
     char hex[16];
-    byte msb, lsb;
+    byte msb, lsb, sbyte;
     uint16_t data;
-    size_t read_bytes;
-    size_t buf_remaining;
-    size_t adc_off = 3u;
-    size_t adc_ins = 0u;
+    uint32_t read_bytes;
+    uint32_t buf_remaining;
+    uint32_t adc_off = 3u;
+    uint32_t adc_ins = 0u;
+    CRC32 crc;
 
     // Enter programming mode.
     digitalWrite(nPROG, LOW);
@@ -874,7 +879,8 @@ int prog_hist(uint32_t n)
     Serial.print(nwords, DEC);
     Serial.print(F(" words of history...\n\n"));
     master_reset(false);
-    set_fifo_delay(nwords, false);
+    //set_fifo_delay(nwords, false);
+    set_delay(nwords, false);
 
     // Program the data one hist[] buffer at a time.
     while (bytes < n) {
@@ -896,24 +902,30 @@ int prog_hist(uint32_t n)
 
         digitalWrite(ADC_CLK_S, LOW);
         digitalWrite(WCLK_S, LOW);
-        for (size_t j = 0; j < (read_bytes / row) + (last ? 1 : 0); j++) {
-            size_t end_bytes = last ? read_bytes % row : row;
+        for (uint32_t j = 0; j < (read_bytes / row) + (last ? 1 : 0); j++) {
+            uint32_t end_bytes = last ? read_bytes % row : row;
 
             // The actual programming
-            for (size_t k = 0; k < end_bytes; k++) {
+            for (uint32_t k = 0; k < end_bytes; k++) {
+                delayMicroseconds(100); // This may be decreased, depending upon signal speed
+                sbyte = hist[row*j + k];
+                crc.update(sbyte);
                 if (k % 2 == 0) {
-                    msb = hist[row*j + k];
+                    lsb = sbyte;
                 } else {
-                    lsb = hist[row*j + k];
-                    data = (msb << 8) | lsb;
+                    msb = sbyte;
+                    data = 0x0FFF - ((msb << 8) | lsb); // Programming circuitry inverts, so reinvert
+                    //data = ((msb << 8) | lsb); // Inverted
                     analogWrite(PROG_D, data);
-                    
+                    delayMicroseconds(1000); // This may be decreased, depending upon signal speed
                     // Write ADC output N-3 to the FIFO before latching in
                     // the next in put to the ADC.
                     if (adc_ins >= adc_off) digitalWrite(WCLK_S, HIGH);
-                    delayMicroseconds(1); // Maybe unnecessary. Check clock hold times.
-                    digitalWrite(ADC_CLK_S, HIGH);
+                    delayMicroseconds(10); // Maybe unnecessary. Check clock hold times.
                     if (adc_ins >= adc_off) digitalWrite(WCLK_S, LOW);
+                    delayMicroseconds(10); // Maybe unnecessary. Check clock hold times.
+                    digitalWrite(ADC_CLK_S, HIGH);
+                    delayMicroseconds(10); // Maybe unnecessary. Check clock hold times.
                     digitalWrite(ADC_CLK_S, LOW);
                     if (adc_ins < adc_off) adc_ins++;
                 }
@@ -922,27 +934,29 @@ int prog_hist(uint32_t n)
             // They will be clocked in after the switch to normal operation (external WCLK).
 
             // Printing a hexdump back
-            sprintf(hex, "%04X:\t", bufs * HBUF_SIZE + j * row);
+            sprintf(hex, "%06X:\t", bufs * HBUF_SIZE + j * row);
             Serial.print(hex);
-            for (size_t k = 0; k < end_bytes; k++) {
+            for (uint32_t k = 0; k < end_bytes; k++) {
                 sprintf(hex, "%02X", hist[row*j + k]);
                 Serial.print(hex);
                 if (k % col == col - 1) Serial.print(' ');
             }
             if (last) { // Pad last row
-                for (size_t k = 0; k < 2 * (row - end_bytes); k++)
+                for (uint32_t k = 0; k < 2 * (row - end_bytes); k++)
                     Serial.print(' ');
             }
             Serial.print('\t');
-            for (size_t k = 0; k < end_bytes; k++) {
+            for (uint32_t k = 0; k < end_bytes; k++) {
                 byte b = hist[row*j + k];
                 Serial.print(b < 32 ? '.' : (char) b);
             }
             Serial.println();
         }
-        
+
         bufs++;
     }
+    Serial.print(F("CRC32: "));
+    Serial.println(crc.finalize(), HEX);
     Serial.println(F("\nDone programming history. Waiting for start command ('go')."));
 
     return 1;
@@ -990,14 +1004,24 @@ void prog_debug(void)
     digitalWrite(nPROG, LOW);
     delayMicroseconds(10);
     // Does not account for first three words into ADC, but OK for debugging
-    for (uint16_t triangle = 0u; triangle < nwords; triangle++) {
-        analogWrite(PROG_D, 16*triangle); // high 4 bits are discarded
+    for (uint16_t triangle = 0u ;; triangle++) {
+    //for (uint16_t triangle = 0u; triangle < nwords; triangle++) {
+        analogWrite(PROG_D, ((1<<12) - 1) - 4 * triangle); // High 4 bits are discarded. Subtraction inverts.
         digitalWrite(WCLK_S, HIGH);
         digitalWrite(WCLK_S, LOW);
         digitalWrite(ADC_CLK_S, HIGH);
         digitalWrite(ADC_CLK_S, LOW);
     }
     Serial.println(F("\nDEBUG: Done programming history. Waiting for start command ('go')."));
+}
+
+
+void prog_clock_debug(void)
+{
+    digitalWrite(WCLK_S, HIGH);
+    digitalWrite(WCLK_S, LOW);
+    digitalWrite(ADC_CLK_S, HIGH);
+    digitalWrite(ADC_CLK_S, LOW);
 }
 
 // vim:ts=4:sts=4:sw=4:et:
