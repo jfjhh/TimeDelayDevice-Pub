@@ -287,7 +287,8 @@ void setup(void)
     digitalWrite(MRS,  HIGH);
     digitalWrite(PRS,  HIGH);
     digitalWrite(RT,   HIGH);
-    digitalWrite(FWFT, HIGH);
+    //digitalWrite(FWFT, HIGH);
+    digitalWrite(FWFT, LOW); // Let's try IDT mode
     digitalWrite(LD,   HIGH);
     digitalWrite(WEN,  HIGH);
     digitalWrite(REN,  HIGH);
@@ -633,7 +634,8 @@ void master_reset(boolean start)
     Serial.print(F("Master Reset ... "));
     t1 = micros();
     digitalWrite(nPROG, LOW);
-    digitalWrite(FWFT,  HIGH);
+    //digitalWrite(FWFT, HIGH);
+    digitalWrite(FWFT, LOW); // Let's try IDT mode
     digitalWrite(LD,    HIGH);
     digitalWrite(MRS,   LOW);
     delayMicroseconds(1);
