@@ -47,16 +47,6 @@ enum menu_mode {
     MENU = 0, // Main menu
     DELAY,    // Adjust the word count using the rotary encoder
     FIFO,     // Show FIFO status
-    HELP,     // Show on-line help
-    ABOUT,    // About the device
-    FOO,
-    BAR,
-    BAZ,
-    QUUX,
-    A,
-    B,
-    C,
-    D,
     MENU_MODES,
 } menu_mode = DELAY;
 
@@ -64,16 +54,6 @@ const PROGMEM char menu_names[][16] = {
     "Menu",
     "Delay",
     "FIFO",
-    "Help",
-    "About",
-    "Foo",
-    "Bar",
-    "Baz",
-    "Quux",
-    "A",
-    "B",
-    "C",
-    "D",
 };
 
 uint32_t menu_pos = MENU + 1;
@@ -331,7 +311,7 @@ void setup(void)
         display.setTextColor(WHITE);
         display.setTextSize(1);
         display.setCursor(0, 0);
-        display.print(F("Time Delay Device vP2"));
+        display.print(F("Time Delay Device vP3"));
         display.setCursor(0, 8);
         display.print(F("Reed College Physics"));
         display.setCursor(0, 24);
@@ -426,13 +406,13 @@ void loop(void)
                     display.clearDisplay();
                     display.setFont(TEXT_FONT);
                     for (size_t i = MENU + 1; i < MENU_MODES; i++) {
-                        int16_t x = 8 + ((i - 1) / 4) * SCREEN_WIDTH / ((MENU_MODES - 1) / 4);
+                        int16_t x = 8 + ((i - 1) / 4) * SCREEN_WIDTH;
                         int16_t y = ((i - 1) % 4) * 8;
                         display.setCursor(x, y);
                         display.print(menu_names[i]);
                     }
 
-                    int16_t alt = ((menu_pos - 1) / 4) * SCREEN_WIDTH / ((MENU_MODES - 1) / 4);
+                    int16_t alt = ((menu_pos - 1) / 4) * SCREEN_WIDTH;
                     int16_t mid = 2 + ((menu_pos - 1) % 4) * 8;
                     display.fillTriangle(alt, mid - 2, alt, mid + 2, alt + 3, mid, WHITE);
                     display.display();
@@ -476,12 +456,6 @@ void loop(void)
                         display.getTextBounds(s_digits, digit_x, digit_y, &x, &y, &w, &h);
                         display.setCursor(SCREEN_WIDTH - w + 6, digit_y - h + 1);
                         display.print(F("words"));
-
-                        if (digitalRead(IR) | digitalRead(OR)) { // IR and OR are active low, so runs if FIFO I/O not ready
-                            display.getTextBounds(F("NoI/O"), digit_x, digit_y, &x, &y, &w, &h);
-                            display.setCursor(SCREEN_WIDTH - w, SCREEN_HEIGHT - h);
-                            display.print(F("NoI/O"));
-                        }
                         
                         display.display();
                         draw = false;
@@ -512,10 +486,6 @@ void loop(void)
                 }
                 break;
 
-            case HELP:
-                Serial.println("Help");
-                break;
-                
             default:
                 Serial.println("Menu error!");
                 break;
