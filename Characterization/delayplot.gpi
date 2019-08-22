@@ -1,9 +1,8 @@
 set terminal pngcairo transparent enhanced font "Droid Sans,56" fontscale 1.0 size 3200, 2400
-set output 'delayplot.png'
+set output 'delayplot-color.png'
 
 set multiplot
 set style increment default
-# set xrange [105:295] noreverse writeback
 
 set datafile separator ','
 dlin = 'delayplot.csv'
@@ -18,10 +17,10 @@ set logscale xy
 
 plot [10:3e5][] \
        dlin u 3:2:1 w filledcurves lt rgb '#c0c0c0' t '', \
-       dlin u 3:1 w linespoints pt 5 ps 2 lt rgb '#000000' t '', \
-       dlin u 3:2 w linespoints pt 7 ps 2 lt rgb '#000000' t '', \
-       NaN w linespoints pt 5 ps 4 lw 2 lt rgb '#000000' t 'Minimum delay', \
-       NaN w linespoints pt 7 ps 4 lw 2 lt rgb '#000000' t 'Maximum delay'
+       dlin u 3:1 w linespoints pt 5 ps 2 lc rgb '#0000ff' t '', \
+       dlin u 3:2 w linespoints pt 7 ps 2 lc rgb '#ff0000' t '', \
+       NaN w linespoints pt 5 ps 4 lw 2 lc rgb '#0000ff' t 'Minimum delay', \
+       NaN w linespoints pt 7 ps 4 lw 2 lc rgb '#ff0000' t 'Maximum delay'
 
 set origin 0.55,0.15
 set size  0.4,0.4
@@ -32,9 +31,9 @@ unset ylabel
 unset logscale
 
 plot [10:22][0.15:0.5] \
-       dlin u 3:2:1 w filledcurves lt rgb '#c0c0c0', \
-       dlin u 3:1 w linespoints pt 5 ps 3 lt rgb '#000000', \
-       dlin u 3:2 w linespoints pt 7 ps 3 lt rgb '#000000'
+       dlin u 3:2:1 w filledcurves lc rgb '#d8d8d8', \
+       dlin u 3:1 w linespoints pt 5 ps 3 lc rgb '#0000ff', \
+       dlin u 3:2 w linespoints pt 7 ps 3 lc rgb '#ff0000'
 
 unset multiplot
 
