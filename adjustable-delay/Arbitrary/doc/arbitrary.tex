@@ -1,0 +1,98 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{siunitx}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{arrows,positioning,fit,decorations.pathmorphing}
+
+% Set nice colors for TikZ pictures (also good grayscale balance)
+\definecolor{OwlRed}{RGB}{ 255, 92, 168}
+\definecolor{OwlGreen}{RGB}{ 90, 168, 0}
+\definecolor{OwlBlue}{RGB}{ 0, 152, 233}
+\definecolor{OwlYellow}{RGB}{ 242, 147, 24}
+\colorlet{OwlViolet}{OwlRed!50!OwlBlue}
+\colorlet{OwlBrown}{OwlRed!50!OwlGreen}
+\colorlet{OwlOrange}{OwlRed!50!OwlYellow}
+\colorlet{OwlCyan}{OwlGreen!50!OwlBlue}
+\colorlet{red}{OwlRed}
+\colorlet{green}{OwlGreen}
+\colorlet{blue}{OwlBlue}
+\colorlet{yellow}{OwlYellow}
+\colorlet{violet}{OwlViolet}
+\colorlet{brown}{OwlBrown}
+\colorlet{orange}{OwlOrange}
+\colorlet{cyan}{OwlCyan}
+
+\title{Arbitrary Delay for \textsc{Fifo} P3F}
+\author{Alex Striff}
+\date{August 26, 2019}
+
+\begin{document}
+\maketitle
+
+Since we can clock the read clock (\texttt{RCLK}) and write clock
+(\texttt{WCLK}) for the \textsc{fifo} independently, we can make the delay be an
+arbitrary function of state if
+\[
+  \textcolor{yellow}{f_\textsc{wclk}}
+  = k\textcolor{blue}{\dot{\tau}} + \textcolor{red}{f_\textsc{rclk}}
+\]
+This may be achieved with the circuit of Fig.~\ref{fig:arb}.
+
+\begin{figure}
+  \centering
+  \begin{tikzpicture}[%
+      isosceles triangle apex angle=60,
+      block/.style={rectangle,fill=#1,draw=#1!90,thick,rounded corners=4pt},
+      block/.default={blue},
+      signal/.style={midway,font=\footnotesize},
+      conn/.style={thick,->},
+      ampblock/.style={block=#1,isosceles triangle},
+      ampblock/.default={blue},
+      circblock/.style={block=#1,circle},
+      circblock/.default={blue},
+    ]
+    \node[block=blue] (delay) at (0,0) {$\tau(y)$};
+    \node[block=violet] (dt) at (1.5,0) {$\dv{t}$};
+    \node[ampblock=violet] (amp) at (3,0) {$k$};
+    \node[circblock=violet] (add) at (5,0) {$\Sigma$};
+    \node[block=violet] (off) at (5,-1.5) {$V$};
+    \node[block=violet] (vco) at (7,0) {VCO};
+    \node[block=yellow] (wclk) at (9.5,0) {$f_\textsc{wclk}$};
+    \node[block=red] (rclk) at (9.5,-1.5) {$f_\textsc{rclk}$};
+    \draw[conn] (delay) -- (dt);
+    \draw[conn] (dt) -- (amp);
+    \draw[conn] (amp.east)+(-3pt,0) -- (add);
+    \draw[conn] (rclk) -- (off);
+    \draw[conn] (off) -- (add);
+    \draw[conn] (add) -- (vco);
+    \draw[conn] (vco) -- (wclk);
+  \end{tikzpicture}
+  \caption{Arbitrary delay circuit block diagram.}
+  \label{fig:arb}
+\end{figure}
+
+I have already ordered some prototype parts that could be used to create this
+circuit in hardware. They should be in the cardboard box of parts and stuff that
+I left in the lab.
+
+\begin{itemize}
+  \item \texttt{TL082} \textsc{jfet}-input opamps (on breakout boards).
+  \item A \textsc{vco} (voltage-controlled oscillator) part by \textsc{ti}.
+  \item A \SI{4}{\MHz} crystal oscillator.
+  \item A binary ripple-counter part (\textsc{cd}-series).
+  \item Some \textsc{mux}es (maybe on breakout boards).
+\end{itemize}
+
+We just need to use opamps to differentiate $\tau(y)$ and then suitably offset
+and scale that signal so that when $\dot{\tau} = \SI{0}{\s\per\s}$, the
+input voltage to the \textsc{vco} will cause the \textsc{vco} to generate
+a clock at $f_\textsc{rclk}$. Alternatively, make the differentiator inverting
+and switch the role of \texttt{WCLK} and \textsc{RCLK}.
+
+\end{document}
+
+
+

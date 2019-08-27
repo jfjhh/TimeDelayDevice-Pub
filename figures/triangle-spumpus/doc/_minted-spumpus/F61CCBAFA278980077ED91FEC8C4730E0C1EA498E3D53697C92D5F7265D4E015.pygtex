@@ -1,0 +1,37 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{set} \PYG{n+nb}{terminal} \PYG{n}{pngcairo} \PYG{n}{transparent} \PYG{n}{enhanced} \PYG{n}{font} \PYG{l+s}{\PYGZdq{}Droid Sans,72\PYGZdq{}} \PYGZbs{}
+      \PYG{n}{fontscale} \PYG{l+m+mf}{1.0} \PYG{n}{size} \PYG{l+m+mi}{3600}\PYG{o}{,} \PYG{l+m+mi}{2400}
+
+\PYG{c}{\PYGZsh{} Dark Owl}
+\PYG{n+nv}{text} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}ffffff\PYGZsq{}}
+\PYG{n+nv}{spcolor} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}0098e9\PYGZsq{}} \PYG{c}{\PYGZsh{} OwlBlue}
+\PYG{k}{set} \PYG{n+nb}{output} \PYG{l+s}{\PYGZsq{}spumpus\PYGZhy{}do.png\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Paper Color}
+\PYG{c}{\PYGZsh{} text = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} spcolor = \PYGZsq{}\PYGZsh{}0098e9\PYGZsq{} \PYGZsh{} OwlBlue}
+\PYG{c}{\PYGZsh{} set output \PYGZsq{}spumpus\PYGZhy{}pc.png\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Paper Grayscale}
+\PYG{c}{\PYGZsh{} text = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} spcolor = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} set output \PYGZsq{}spumpus\PYGZhy{}pg.png\PYGZsq{}}
+
+\PYG{k}{set} \PYG{n+nb}{style} \PYG{n}{increment} \PYG{n}{default}
+
+\PYG{k}{set} \PYG{n+nb}{border} \PYG{n}{lw} \PYG{l+m+mi}{3} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+
+\PYG{k}{set} \PYG{n+nb}{datafile} \PYG{n}{separator} \PYG{l+s}{\PYGZsq{},\PYGZsq{}}
+\PYG{n+nv}{sphist} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}spumpus\PYGZhy{}hist.csv\PYGZsq{}}
+\PYG{n+nv}{spout}  \PYG{o}{=} \PYG{l+s}{\PYGZsq{}spumpus\PYGZhy{}out.csv\PYGZsq{}}
+
+\PYG{k}{unset} \PYG{n+nb}{key}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{l+s}{\PYGZsq{}Time (ms)\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{l+s}{\PYGZsq{}Voltage (V)\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{xrange} \PYG{p}{[}\PYG{l+m+mi}{0}\PYG{o}{:}\PYG{l+m+mi}{3}\PYG{p}{]} \PYG{n}{noreverse} \PYG{n}{writeback}
+
+\PYG{k}{plot} \PYGZbs{}
+       \PYG{n}{sphist} \PYG{n+nb}{u} \PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{1} \PYG{o}{*} \PYG{l+m+mf}{1e3}\PYG{p}{)}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{2}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{spcolor}
+\end{Verbatim}

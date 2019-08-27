@@ -1,0 +1,1026 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cm}{/*******************************************************************************}
+\PYG{c+cm}{ * Time Delay Device Arduino Control}
+\PYG{c+cm}{ * Edgar Perez and Alex Striff}
+\PYG{c+cm}{ * Reed College Physics Department}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ * For more information, contact Lucas Illing \PYGZlt{}illing@reed.edu\PYGZgt{}.}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ * Version  Date        Author       Changes}
+\PYG{c+cm}{ * \PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}  \PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}  \PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}  \PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}}
+\PYG{c+cm}{ * v1.0     2016\PYGZhy{}12\PYGZhy{}15  Edgar Perez  Prototype completed.}
+\PYG{c+cm}{ * v2.0     2019\PYGZhy{}07\PYGZhy{}XX  Alex Striff  Modified for publication board.}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ ******************************************************************************/}
+
+\PYG{c+c1}{// Code options (feature selection)}
+\PYG{c+cp}{\PYGZsh{}define SCREEN   }\PYG{c+c1}{// Uncomment to enable screen output}
+\PYG{c+cp}{\PYGZsh{}define SCONTROL }\PYG{c+c1}{// Uncomment for serial control and logging}
+\PYG{c+cp}{\PYGZsh{}define HISTORY  }\PYG{c+c1}{// Uncomment for FIFO initial state programming (req: SCONTROL)}
+\PYG{c+cp}{\PYGZsh{}define DEBUG    }\PYG{c+c1}{// Uncomment for serial debug output}
+
+\PYG{c+cp}{\PYGZsh{}if defined(HISTORY) \PYGZam{}\PYGZam{} defined(SCONTROL)}
+\PYG{c+cp}{\PYGZsh{}define HIST}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}CRC32.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}endif}
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}Wire.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}Adafruit\PYGZus{}GFX.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}Adafruit\PYGZus{}SSD1306.h\PYGZgt{}}
+\PYG{c+c1}{// \PYGZsh{}include \PYGZlt{}Fonts/FreeSans9pt7b.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}lato24.h\PYGZdq{}}
+
+\PYG{c+cp}{\PYGZsh{}define DIGIT\PYGZus{}FONT  \PYGZam{}Lato\PYGZus{}Regular\PYGZus{}24 }\PYG{c+c1}{// 24 px high}
+\PYG{c+cp}{\PYGZsh{}define TEXT\PYGZus{}FONT   NULL  }\PYG{c+c1}{// 8 px high, NULL for default font in Adafruit GFX}
+
+\PYG{k}{extern} \PYG{n}{TwoWire} \PYG{n}{Wire1}\PYG{p}{;} \PYG{c+c1}{// Use second I2C pins on the Due}
+
+\PYG{c+cp}{\PYGZsh{}define SCREEN\PYGZus{}WIDTH 128 }\PYG{c+c1}{// OLED display width, in pixels}
+\PYG{c+cp}{\PYGZsh{}define SCREEN\PYGZus{}HEIGHT 32 }\PYG{c+c1}{// OLED display height, in pixels}
+\PYG{c+cp}{\PYGZsh{}define OLED\PYGZus{}RESET    A0 }\PYG{c+c1}{// Reset pin (or \PYGZhy{}1 if sharing Arduino reset pin)}
+\PYG{n}{Adafruit\PYGZus{}SSD1306} \PYG{n+nf}{display}\PYG{p}{(}\PYG{n}{SCREEN\PYGZus{}WIDTH}\PYG{p}{,} \PYG{n}{SCREEN\PYGZus{}HEIGHT}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{Wire1}\PYG{p}{,} \PYG{n}{OLED\PYGZus{}RESET}\PYG{p}{);}
+\PYG{n}{boolean} \PYG{n}{screen} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+\PYG{n}{boolean} \PYG{n}{draw}   \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+\PYG{k+kt}{char} \PYG{n}{s\PYGZus{}digits}\PYG{p}{[}\PYG{l+m+mi}{16}\PYG{p}{];}
+
+\PYG{k}{enum} \PYG{n}{menu\PYGZus{}mode} \PYG{p}{\PYGZob{}}
+    \PYG{n}{MENU} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{c+c1}{// Main menu}
+    \PYG{n}{DELAY}\PYG{p}{,}    \PYG{c+c1}{// Adjust the word count using the rotary encoder}
+    \PYG{n}{FIFO}\PYG{p}{,}     \PYG{c+c1}{// Show FIFO status}
+    \PYG{n}{MENU\PYGZus{}MODES}\PYG{p}{,}
+\PYG{p}{\PYGZcb{}} \PYG{n}{menu\PYGZus{}mode} \PYG{o}{=} \PYG{n}{DELAY}\PYG{p}{;}
+
+\PYG{k}{const} \PYG{n}{PROGMEM} \PYG{k+kt}{char} \PYG{n}{menu\PYGZus{}names}\PYG{p}{[][}\PYG{l+m+mi}{16}\PYG{p}{]} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+    \PYG{l+s}{\PYGZdq{}Menu\PYGZdq{}}\PYG{p}{,}
+    \PYG{l+s}{\PYGZdq{}Delay\PYGZdq{}}\PYG{p}{,}
+    \PYG{l+s}{\PYGZdq{}FIFO\PYGZdq{}}\PYG{p}{,}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{menu\PYGZus{}pos} \PYG{o}{=} \PYG{n}{MENU} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{;}
+\PYG{k+kt}{int} \PYG{n}{menu\PYGZus{}press} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+
+\PYG{c+c1}{// Double\PYGZhy{}press parameters}
+\PYG{k+kt}{int} \PYG{n}{dpress} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k+kt}{long} \PYG{n}{dpress\PYGZus{}delay} \PYG{o}{=} \PYG{l+m+mi}{100L}\PYG{p}{;}
+\PYG{k+kt}{long} \PYG{n}{dpress\PYGZus{}time} \PYG{o}{=} \PYG{l+m+mi}{0L}\PYG{p}{;}
+
+\PYG{c+c1}{// Repeated drawing parameters (in ms)}
+\PYG{k+kt}{long} \PYG{n}{last\PYGZus{}update} \PYG{o}{=} \PYG{l+m+mi}{0L}\PYG{p}{;}
+\PYG{k+kt}{long} \PYG{n}{update\PYGZus{}interval} \PYG{o}{=} \PYG{l+m+mi}{100L}\PYG{p}{;}
+
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+
+\PYG{k}{typedef} \PYG{k}{const} \PYG{k+kt}{uint8\PYGZus{}t} \PYG{n}{pin}\PYG{p}{;}
+
+\PYG{k}{typedef} \PYG{k}{struct} \PYG{p}{\PYGZob{}}
+    \PYG{n}{pin} \PYG{n}{p}\PYG{p}{;}                      \PYG{c+c1}{// The pin that the button is connected to.}
+    \PYG{k+kt}{long} \PYG{n}{debounce\PYGZus{}delay}\PYG{p}{;}        \PYG{c+c1}{// The delay (ms) for debouncing a button press.}
+    \PYG{k+kt}{int} \PYG{n}{state}\PYG{p}{;}                  \PYG{c+c1}{// The current state of the button.}
+    \PYG{k+kt}{int} \PYG{n}{last\PYGZus{}state}\PYG{p}{;}             \PYG{c+c1}{// The last state of the button.}
+    \PYG{k+kt}{long} \PYG{n}{last\PYGZus{}debounce\PYGZus{}time}\PYG{p}{;}    \PYG{c+c1}{// The last debounce time for the button.}
+\PYG{p}{\PYGZcb{}} \PYG{n}{button}\PYG{p}{;}
+
+\PYG{k}{typedef} \PYG{k}{struct} \PYG{p}{\PYGZob{}}
+    \PYG{n}{pin} \PYG{n}{a}\PYG{p}{;}          \PYG{c+c1}{// Output A}
+    \PYG{n}{pin} \PYG{n}{b}\PYG{p}{;}          \PYG{c+c1}{// Output B}
+    \PYG{n}{button} \PYG{n}{btn}\PYG{p}{;}     \PYG{c+c1}{// Button (knob of encoder)}
+\PYG{p}{\PYGZcb{}} \PYG{n}{rotary\PYGZus{}encoder}\PYG{p}{;}
+
+\PYG{c+c1}{// FIFO word limits}
+\PYG{c+c1}{// min\PYGZus{}words = 1 or 2 give the same delay.}
+\PYG{c+c1}{// min\PYGZus{}words = 3 is off\PYGZhy{}by\PYGZhy{}one depending upon the clock.}
+\PYG{c+c1}{// FIFO words:  0        1  2  3     4   5  ...}
+\PYG{c+c1}{// Delay words: invalid  8  8  9,10  11  12 ...}
+\PYG{k}{const} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{min\PYGZus{}words}  \PYG{o}{=} \PYG{l+m+mi}{4}\PYG{p}{;} \PYG{c+c1}{// FIFO flags}
+\PYG{k}{const} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{max\PYGZus{}words}  \PYG{o}{=} \PYG{l+m+mi}{262144}\PYG{p}{;} \PYG{c+c1}{// FIFO flags}
+\PYG{k}{const} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{off\PYGZus{}words}  \PYG{o}{=} \PYG{l+m+mi}{3} \PYG{o}{+} \PYG{l+m+mi}{2} \PYG{o}{+} \PYG{l+m+mi}{2}\PYG{p}{;} \PYG{c+c1}{// ADC + DAC + FIFO.}
+\PYG{k}{const} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{init\PYGZus{}words} \PYG{o}{=} \PYG{l+m+mi}{100}\PYG{p}{;} \PYG{c+c1}{// FIFO + offset (user\PYGZhy{}visible)}
+
+\PYG{c+cp}{\PYGZsh{}ifdef HIST}
+\PYG{c+c1}{// History programming buffer}
+\PYG{c+cp}{\PYGZsh{}define HBUF\PYGZus{}SIZE   16 }\PYG{c+c1}{// Make hist relatively large, given SRAM limitations}
+\PYG{n}{byte} \PYG{n}{hist}\PYG{p}{[}\PYG{n}{HBUF\PYGZus{}SIZE}\PYG{p}{];}  \PYG{c+c1}{// Holds (HBUF\PYGZus{}SIZE / 2) code words (uint16\PYGZus{}t)}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// HIST}
+
+\PYG{c+c1}{// Rotary encoder pin mapping}
+\PYG{n}{rotary\PYGZus{}encoder} \PYG{n}{enc} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+    \PYG{p}{.}\PYG{n}{a}   \PYG{o}{=} \PYG{l+m+mi}{48}\PYG{p}{,} \PYG{c+c1}{// ENC\PYGZus{}A pin}
+    \PYG{p}{.}\PYG{n}{b}   \PYG{o}{=} \PYG{l+m+mi}{50}\PYG{p}{,} \PYG{c+c1}{// ENC\PYGZus{}B pin}
+    \PYG{p}{.}\PYG{n}{btn} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+        \PYG{p}{.}\PYG{n}{p} \PYG{o}{=} \PYG{l+m+mi}{52}\PYG{p}{,} \PYG{c+c1}{// ENC\PYGZus{}BTN pin}
+        \PYG{p}{.}\PYG{n}{debounce\PYGZus{}delay} \PYG{o}{=} \PYG{l+m+mi}{50}\PYG{p}{,}
+        \PYG{p}{.}\PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{,}
+        \PYG{p}{.}\PYG{n}{last\PYGZus{}state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{,}
+        \PYG{p}{.}\PYG{n}{last\PYGZus{}debounce\PYGZus{}time} \PYG{o}{=} \PYG{l+m+mi}{0}
+    \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{words}\PYG{p}{;} \PYG{c+c1}{// The number of delay words for the FIFO}
+\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{words\PYGZus{}digit} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+
+\PYG{k+kt}{int32\PYGZus{}t}  \PYG{n}{count\PYGZus{}min} \PYG{o}{=} \PYG{n}{min\PYGZus{}words}\PYG{p}{;}
+\PYG{k+kt}{int32\PYGZus{}t}  \PYG{n}{count\PYGZus{}max} \PYG{o}{=} \PYG{n}{max\PYGZus{}words}\PYG{p}{;}
+\PYG{k+kt}{int32\PYGZus{}t}  \PYG{n}{count\PYGZus{}mul} \PYG{o}{=} \PYG{l+m+mi}{1000}\PYG{p}{;}
+
+\PYG{c+c1}{// FIFO pin mappings:}
+\PYG{c+c1}{// Active LOW unless stated otherwise}
+\PYG{n}{pin} \PYG{n}{RT}    \PYG{o}{=} \PYG{l+m+mi}{42}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{OE}    \PYG{o}{=} \PYG{l+m+mi}{45}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{REN}   \PYG{o}{=} \PYG{l+m+mi}{43}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{OR}    \PYG{o}{=} \PYG{l+m+mi}{40}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{PAE}   \PYG{o}{=} \PYG{l+m+mi}{41}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{HF}    \PYG{o}{=} \PYG{l+m+mi}{38}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{PAF}   \PYG{o}{=} \PYG{l+m+mi}{39}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{FWFT}  \PYG{o}{=} \PYG{l+m+mi}{37}\PYG{p}{;} \PYG{c+c1}{// FWFT/SI. Active HIGH}
+\PYG{n}{pin} \PYG{n}{IR}    \PYG{o}{=} \PYG{l+m+mi}{36}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{LD}    \PYG{o}{=} \PYG{l+m+mi}{34}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{MRS}   \PYG{o}{=} \PYG{l+m+mi}{35}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{PRS}   \PYG{o}{=} \PYG{l+m+mi}{32}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{WEN}   \PYG{o}{=} \PYG{l+m+mi}{31}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{SEN}   \PYG{o}{=} \PYG{l+m+mi}{30}\PYG{p}{;}
+
+\PYG{c+c1}{// Clock control pin mappings:}
+\PYG{c+c1}{// Active HIGH unless stated otherwise}
+\PYG{n}{pin} \PYG{n}{nPROG}  \PYG{o}{=} \PYG{l+m+mi}{22}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{CLK1}   \PYG{o}{=} \PYG{l+m+mi}{26}\PYG{p}{;} \PYG{c+c1}{// 1CLK (single\PYGZhy{}clock operation)}
+\PYG{n}{pin} \PYG{n}{WCLK\PYGZus{}S} \PYG{o}{=} \PYG{l+m+mi}{24}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S} \PYG{o}{=} \PYG{l+m+mi}{28}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{PROG\PYGZus{}D} \PYG{o}{=} \PYG{n}{DAC1}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{STRIG}  \PYG{o}{=} \PYG{l+m+mi}{33}\PYG{p}{;}
+
+\PYG{c+c1}{// FIFO flags to show in status. All active low.}
+\PYG{k}{enum} \PYG{n}{fifo\PYGZus{}flag} \PYG{p}{\PYGZob{}}
+    \PYG{n}{F\PYGZus{}IR} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{c+c1}{// Input ready}
+    \PYG{n}{F\PYGZus{}OR}\PYG{p}{,}     \PYG{c+c1}{// Output ready}
+    \PYG{n}{F\PYGZus{}PAF}\PYG{p}{,}    \PYG{c+c1}{// Partially almost full}
+    \PYG{n}{F\PYGZus{}PAE}\PYG{p}{,}    \PYG{c+c1}{// Partially almost empty}
+    \PYG{n}{F\PYGZus{}HF}\PYG{p}{,}     \PYG{c+c1}{// Half full}
+    \PYG{n}{F\PYGZus{}SIZE}\PYG{p}{,}   \PYG{c+c1}{// The number of flags (not on FIFO)}
+\PYG{p}{\PYGZcb{}} \PYG{n}{fifo\PYGZus{}flags}\PYG{p}{;}
+
+\PYG{k}{const} \PYG{n}{pin} \PYG{n}{fifo\PYGZus{}flag\PYGZus{}pins}\PYG{p}{[]} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+    \PYG{n}{IR}\PYG{p}{,}
+    \PYG{n}{OR}\PYG{p}{,}
+    \PYG{n}{PAF}\PYG{p}{,}
+    \PYG{n}{PAE}\PYG{p}{,}
+    \PYG{n}{HF}\PYG{p}{,}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{const} \PYG{n}{PROGMEM} \PYG{k+kt}{char} \PYG{n}{fifo\PYGZus{}flag\PYGZus{}names}\PYG{p}{[][}\PYG{l+m+mi}{16}\PYG{p}{]} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+    \PYG{l+s}{\PYGZdq{}IR\PYGZdq{}}\PYG{p}{,}
+    \PYG{l+s}{\PYGZdq{}OR\PYGZdq{}}\PYG{p}{,}
+    \PYG{l+s}{\PYGZdq{}PAF\PYGZdq{}}\PYG{p}{,}
+    \PYG{l+s}{\PYGZdq{}PAE\PYGZdq{}}\PYG{p}{,}
+    \PYG{l+s}{\PYGZdq{}HF\PYGZdq{}}\PYG{p}{,}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{c+c1}{// DAC pin mapping}
+\PYG{n}{pin} \PYG{n}{DAC\PYGZus{}LDAC} \PYG{o}{=} \PYG{l+m+mi}{46}\PYG{p}{;}
+\PYG{n}{pin} \PYG{n}{DAC\PYGZus{}CS}   \PYG{o}{=} \PYG{l+m+mi}{44}\PYG{p}{;}
+
+\PYG{c+c1}{// Serial command buffer}
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{c+cp}{\PYGZsh{}define SBLEN   16}
+\PYG{k+kt}{char} \PYG{n}{sb}\PYG{p}{[}\PYG{n}{SBLEN}\PYG{p}{];}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{setup}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{// Serial communication}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{begin}\PYG{p}{(}\PYG{l+m+mi}{115200}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+        \PYG{l+s}{\PYGZdq{}====================}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{} FIFO\PYGZus{}P3 Time Delay }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}====================}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}    Reed College    }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{} Physics Department }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}        2019        }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}====================}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}    Alex Striff     }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}    Edgar Perez     }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}    Lucas Illing    }\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}====================}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}Enabled features: \PYGZdq{}}
+        \PYG{c+cp}{\PYGZsh{}ifdef DEBUG}
+        \PYG{l+s}{\PYGZdq{}DEBUG \PYGZdq{}}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// DEBUG}
+        \PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+        \PYG{l+s}{\PYGZdq{}SCREEN \PYGZdq{}}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+        \PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+        \PYG{l+s}{\PYGZdq{}SCONTROL \PYGZdq{}}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+        \PYG{c+cp}{\PYGZsh{}ifdef HIST}
+        \PYG{l+s}{\PYGZdq{}HIST \PYGZdq{}}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// HIST}
+        \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}Type \PYGZsq{}h\PYGZsq{} for help.}\PYG{l+s+se}{\PYGZbs{}n\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}Setting up I/O ... \PYGZdq{}}
+        \PYG{p}{));}
+
+    \PYG{c+c1}{// DAC initialization}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);} \PYG{c+c1}{// x. Check not flipped}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}LDAC}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{5}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);} \PYG{c+c1}{// x.}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}LDAC}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+
+    \PYG{c+c1}{// Due (self) DAC initialization}
+    \PYG{n}{analogWriteResolution}\PYG{p}{(}\PYG{l+m+mi}{12}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{PROG\PYGZus{}D}\PYG{p}{,} \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{analogWrite}\PYG{p}{(}\PYG{n}{PROG\PYGZus{}D}\PYG{p}{,} \PYG{l+m+mi}{1u} \PYG{o}{\PYGZlt{}\PYGZlt{}} \PYG{p}{(}\PYG{l+m+mi}{12} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{2}\PYG{p}{));} \PYG{c+c1}{// Half full scale}
+
+    \PYG{c+c1}{// Clock control pins}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,}     \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{CLK1}\PYG{p}{,}      \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,}    \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{STRIG}\PYG{p}{,}     \PYG{n}{OUTPUT}\PYG{p}{);}
+
+    \PYG{c+c1}{// Clock default state (single clock, not programming)}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{CLK1}\PYG{p}{,}      \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,}    \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{STRIG}\PYG{p}{,}     \PYG{n}{LOW}\PYG{p}{);}
+
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);} \PYG{c+c1}{// Disable operation while setting up.}
+
+    \PYG{c+c1}{// FIFO pins}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{REN}\PYG{p}{,}  \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{OR}\PYG{p}{,}   \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{PAE}\PYG{p}{,}  \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{HF}\PYG{p}{,}   \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{PAF}\PYG{p}{,}  \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{IR}\PYG{p}{,}   \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{OE}\PYG{p}{,}   \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{RT}\PYG{p}{,}   \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{FWFT}\PYG{p}{,} \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{LD}\PYG{p}{,}   \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{MRS}\PYG{p}{,}  \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{PRS}\PYG{p}{,}  \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{WEN}\PYG{p}{,}  \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{SEN}\PYG{p}{,}  \PYG{n}{OUTPUT}\PYG{p}{);}
+
+    \PYG{c+c1}{// FIFO default states}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{MRS}\PYG{p}{,}  \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{PRS}\PYG{p}{,}  \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{RT}\PYG{p}{,}   \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{c+c1}{//digitalWrite(FWFT, HIGH);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{FWFT}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);} \PYG{c+c1}{// Let\PYGZsq{}s try IDT mode}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{LD}\PYG{p}{,}   \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WEN}\PYG{p}{,}  \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{REN}\PYG{p}{,}  \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{SEN}\PYG{p}{,}  \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{OE}\PYG{p}{,}   \PYG{n}{LOW}\PYG{p}{);}
+
+    \PYG{c+c1}{// DAC pins}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{100}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,}    \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}LDAC}\PYG{p}{,} \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}CS}\PYG{p}{,}   \PYG{n}{OUTPUT}\PYG{p}{);}
+
+    \PYG{c+c1}{// More DAC initialization}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}CS}\PYG{p}{,}   \PYG{n}{OUTPUT}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}CS}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{5}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}CS}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{5}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}CS}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{5}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{DAC\PYGZus{}CS}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+
+    \PYG{c+c1}{// Rotary encoder pins}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{enc}\PYG{p}{.}\PYG{n}{btn}\PYG{p}{.}\PYG{n}{p}\PYG{p}{,} \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{enc}\PYG{p}{.}\PYG{n}{a}\PYG{p}{,}     \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{pinMode}\PYG{p}{(}\PYG{n}{enc}\PYG{p}{.}\PYG{n}{b}\PYG{p}{,}     \PYG{n}{INPUT\PYGZus{}PULLUP}\PYG{p}{);}
+    \PYG{n}{read\PYGZus{}encoder}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{enc}\PYG{p}{);} \PYG{c+c1}{// Read to initialize previous quadrature state.}
+
+    \PYG{c+c1}{// Screen initialization}
+    \PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+    \PYG{k}{if} \PYG{p}{(}\PYG{o}{!}\PYG{n}{display}\PYG{p}{.}\PYG{n}{begin}\PYG{p}{(}\PYG{n}{SSD1306\PYGZus{}SWITCHCAPVCC}\PYG{p}{,} \PYG{l+m+mh}{0x3C}\PYG{p}{))} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Address 0x3C for 128x32}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}SSD1306 allocation failed. Unable to use screen.\PYGZdq{}}\PYG{p}{));}
+        \PYG{n}{screen} \PYG{o}{=} \PYG{n+nb}{false}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{screen} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{clearDisplay}\PYG{p}{();}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{cp437}\PYG{p}{(}\PYG{n+nb}{true}\PYG{p}{);}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setTextColor}\PYG{p}{(}\PYG{n}{WHITE}\PYG{p}{);}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setTextSize}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Time Delay Device vP3\PYGZdq{}}\PYG{p}{));}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{8}\PYG{p}{);}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Reed College Physics\PYGZdq{}}\PYG{p}{));}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{24}\PYG{p}{);}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}2\PYGZhy{}press knob for menu\PYGZdq{}}\PYG{p}{));}
+        \PYG{n}{display}\PYG{p}{.}\PYG{n}{display}\PYG{p}{();}
+
+        \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint8\PYGZus{}t} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{SCREEN\PYGZus{}WIDTH}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{display}\PYG{p}{.}\PYG{n}{drawPixel}\PYG{p}{(}\PYG{n}{i}\PYG{p}{,} \PYG{l+m+mi}{16} \PYG{o}{+} \PYG{p}{(}\PYG{n}{i}\PYG{o}{*}\PYG{n}{i} \PYG{o}{/} \PYG{l+m+mi}{7}\PYG{p}{)} \PYG{o}{\PYGZpc{}} \PYG{l+m+mi}{8}\PYG{p}{,} \PYG{n}{WHITE}\PYG{p}{);}
+            \PYG{n}{display}\PYG{p}{.}\PYG{n}{display}\PYG{p}{();}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+
+    \PYG{c+c1}{// Do a master reset to initialize the FIFO}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} complete. Initializing FIFO:}\PYG{l+s+se}{\PYGZbs{}n\PYGZbs{}t}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{5}\PYG{p}{);}
+    \PYG{n}{master\PYGZus{}reset}\PYG{p}{(}\PYG{n+nb}{false}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{();}
+    \PYG{n}{set\PYGZus{}delay}\PYG{p}{(}\PYG{n}{init\PYGZus{}words}\PYG{p}{,} \PYG{n+nb}{true}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{loop}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{narg}\PYG{p}{;}
+
+    \PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+    \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{SBLEN}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{n}{sb}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+
+    \PYG{c+c1}{// TODO: Update help.}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{Serial}\PYG{p}{.}\PYG{n}{available}\PYG{p}{()} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{readBytesUntil}\PYG{p}{(}\PYG{l+s+sc}{\PYGZsq{};\PYGZsq{}}\PYG{p}{,} \PYG{n}{sb}\PYG{p}{,} \PYG{n}{SBLEN}\PYG{p}{);}
+
+        \PYG{n}{narg} \PYG{o}{=} \PYG{n}{atol}\PYG{p}{(}\PYG{n}{sb} \PYG{o}{+} \PYG{l+m+mi}{2}\PYG{p}{);}
+        \PYG{k}{switch} \PYG{p}{(}\PYG{n}{sb}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{])} \PYG{p}{\PYGZob{}}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}h\PYGZsq{}}\PYG{o}{:} \PYG{c+c1}{// Fallthrough.}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}H\PYGZsq{}}\PYG{o}{:} \PYG{c+c1}{// Fallthrough.}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}?\PYGZsq{}}\PYG{o}{:} \PYG{n}{serial\PYGZus{}help}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}m\PYGZsq{}}\PYG{o}{:}
+                \PYG{k}{switch} \PYG{p}{(}\PYG{n}{sb}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{])} \PYG{p}{\PYGZob{}}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}r\PYGZsq{}}\PYG{o}{:} \PYG{n}{master\PYGZus{}reset}\PYG{p}{(}\PYG{n+nb}{true}\PYG{p}{);} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{k}{default}\PYG{o}{:}  \PYG{n}{unknown}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}p\PYGZsq{}}\PYG{o}{:}
+                \PYG{k}{switch} \PYG{p}{(}\PYG{n}{sb}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{])} \PYG{p}{\PYGZob{}}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}r\PYGZsq{}}\PYG{o}{:} \PYG{n}{partial\PYGZus{}reset}\PYG{p}{(}\PYG{n+nb}{true}\PYG{p}{);} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{c+cp}{\PYGZsh{}ifdef DEBUG}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}p\PYGZsq{}}\PYG{o}{:} \PYG{n}{prog\PYGZus{}debug}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}c\PYGZsq{}}\PYG{o}{:} \PYG{n}{prog\PYGZus{}clock\PYGZus{}debug}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// DEBUG}
+                    \PYG{c+cp}{\PYGZsh{}ifdef HIST}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}h\PYGZsq{}}\PYG{o}{:} \PYG{n}{prog\PYGZus{}hist}\PYG{p}{(}\PYG{n}{narg}\PYG{p}{);} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// HIST}
+                    \PYG{k}{default}\PYG{o}{:}  \PYG{n}{unknown}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}d\PYGZsq{}}\PYG{o}{:} \PYG{n}{set\PYGZus{}delay}\PYG{p}{(}\PYG{n}{narg}\PYG{p}{,} \PYG{n+nb}{true}\PYG{p}{);} \PYG{k}{break}\PYG{p}{;}
+            \PYG{c+cp}{\PYGZsh{}ifdef HIST}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}g\PYGZsq{}}\PYG{o}{:}
+                \PYG{k}{switch} \PYG{p}{(}\PYG{n}{sb}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{])} \PYG{p}{\PYGZob{}}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}o\PYGZsq{}}\PYG{o}{:} \PYG{n}{start}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{k}{default}\PYG{o}{:}  \PYG{n}{unknown}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// HIST}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}c\PYGZsq{}}\PYG{o}{:}
+                \PYG{k}{switch} \PYG{p}{(}\PYG{n}{sb}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{])} \PYG{p}{\PYGZob{}}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}1\PYGZsq{}}\PYG{o}{:} \PYG{n}{single\PYGZus{}clock}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}2\PYGZsq{}}\PYG{o}{:} \PYG{n}{dual\PYGZus{}clock}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                    \PYG{k}{default}\PYG{o}{:}  \PYG{n}{unknown}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}s\PYGZsq{}}\PYG{o}{:} \PYG{n}{report\PYGZus{}status}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}x\PYGZsq{}}\PYG{o}{:} \PYG{n}{pause}\PYG{p}{(}\PYG{n}{narg}\PYG{p}{);} \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}i\PYGZsq{}}\PYG{o}{:} \PYG{n}{initialize}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}q\PYGZsq{}}\PYG{o}{:} \PYG{n}{quit}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{default}\PYG{o}{:}  \PYG{n}{unknown}\PYG{p}{();} \PYG{k}{break}\PYG{p}{;}
+
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+    \PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{screen}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{switch} \PYG{p}{(}\PYG{n}{menu\PYGZus{}mode}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k}{case} \PYG{n+nl}{MENU}\PYG{p}{:}
+                \PYG{n}{menu\PYGZus{}pos} \PYG{o}{=} \PYG{n}{enc\PYGZus{}adjust\PYGZus{}nodigit}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{menu\PYGZus{}pos}\PYG{p}{,}
+                        \PYG{n}{MENU} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{n}{MENU\PYGZus{}MODES} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{n+nb}{true}\PYG{p}{);}
+                \PYG{k}{if} \PYG{p}{(}\PYG{n}{draw}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{display}\PYG{p}{.}\PYG{n}{clearDisplay}\PYG{p}{();}
+                    \PYG{n}{display}\PYG{p}{.}\PYG{n}{setFont}\PYG{p}{(}\PYG{n}{TEXT\PYGZus{}FONT}\PYG{p}{);}
+                    \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{i} \PYG{o}{=} \PYG{n}{MENU} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MENU\PYGZus{}MODES}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                        \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{8} \PYG{o}{+} \PYG{p}{((}\PYG{n}{i} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{o}{/} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{o}{*} \PYG{n}{SCREEN\PYGZus{}WIDTH}\PYG{p}{;}
+                        \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{y} \PYG{o}{=} \PYG{p}{((}\PYG{n}{i} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{o}{\PYGZpc{}} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{8}\PYG{p}{;}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{menu\PYGZus{}names}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]);}
+                    \PYG{p}{\PYGZcb{}}
+
+                    \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{alt} \PYG{o}{=} \PYG{p}{((}\PYG{n}{menu\PYGZus{}pos} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{o}{/} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{o}{*} \PYG{n}{SCREEN\PYGZus{}WIDTH}\PYG{p}{;}
+                    \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{mid} \PYG{o}{=} \PYG{l+m+mi}{2} \PYG{o}{+} \PYG{p}{((}\PYG{n}{menu\PYGZus{}pos} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{o}{\PYGZpc{}} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{8}\PYG{p}{;}
+                    \PYG{n}{display}\PYG{p}{.}\PYG{n}{fillTriangle}\PYG{p}{(}\PYG{n}{alt}\PYG{p}{,} \PYG{n}{mid} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{alt}\PYG{p}{,} \PYG{n}{mid} \PYG{o}{+} \PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{alt} \PYG{o}{+} \PYG{l+m+mi}{3}\PYG{p}{,}
+                            \PYG{n}{mid}\PYG{p}{,} \PYG{n}{WHITE}\PYG{p}{);}
+                    \PYG{n}{display}\PYG{p}{.}\PYG{n}{display}\PYG{p}{();}
+                    \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{false}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+
+                \PYG{k}{if} \PYG{p}{(}\PYG{n}{read\PYGZus{}button}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{p}{(}\PYG{n}{enc}\PYG{p}{.}\PYG{n}{btn}\PYG{p}{)))} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{menu\PYGZus{}press} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if} \PYG{p}{(}\PYG{n}{menu\PYGZus{}press} \PYG{o}{==} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{c+c1}{// button was pressed and now it is not}
+                    \PYG{n}{menu\PYGZus{}mode} \PYG{o}{=} \PYG{p}{(}\PYG{k}{enum} \PYG{n}{menu\PYGZus{}mode}\PYG{p}{)} \PYG{n}{menu\PYGZus{}pos}\PYG{p}{;}
+                    \PYG{n}{menu\PYGZus{}press} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                    \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+
+                \PYG{k}{break}\PYG{p}{;}
+
+            \PYG{k}{case} \PYG{n+nl}{DELAY}\PYG{p}{:}
+                \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Surrounding block to disambiguate scope}
+                    \PYG{n}{set\PYGZus{}delay}\PYG{p}{(}\PYG{n}{enc\PYGZus{}adjust}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{words}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{words\PYGZus{}digit}\PYG{p}{,} \PYG{n}{count\PYGZus{}min}\PYG{p}{,}
+                                \PYG{n}{count\PYGZus{}max}\PYG{p}{,} \PYG{n+nb}{false}\PYG{p}{,} \PYG{n+nb}{false}\PYG{p}{),} \PYG{n+nb}{true}\PYG{p}{);}
+                    \PYG{k+kt}{int16\PYGZus{}t}  \PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{;}
+                    \PYG{k+kt}{uint16\PYGZus{}t} \PYG{n}{w}\PYG{p}{,} \PYG{n}{h}\PYG{p}{;}
+                    \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{digit\PYGZus{}x} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                    \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{digit\PYGZus{}y} \PYG{o}{=} \PYG{l+m+mi}{24}\PYG{p}{;}
+
+                    \PYG{n}{draw} \PYG{o}{|=} \PYG{n}{millis}\PYG{p}{()} \PYG{o}{\PYGZhy{}} \PYG{n}{last\PYGZus{}update} \PYG{o}{\PYGZgt{}=} \PYG{n}{update\PYGZus{}interval}\PYG{p}{;}
+                    \PYG{k}{if} \PYG{p}{(}\PYG{n}{draw}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{clearDisplay}\PYG{p}{();}
+                        \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{s\PYGZus{}digits}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}06u\PYGZdq{}}\PYG{p}{,} \PYG{n}{words} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setFont}\PYG{p}{(}\PYG{n}{DIGIT\PYGZus{}FONT}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{n}{digit\PYGZus{}x}\PYG{p}{,} \PYG{n}{digit\PYGZus{}y}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{s\PYGZus{}digits}\PYG{p}{);}
+
+                        \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{mid} \PYG{o}{=} \PYG{l+m+mi}{6} \PYG{o}{+} \PYG{p}{(}\PYG{l+m+mi}{6} \PYG{o}{\PYGZhy{}} \PYG{n}{words\PYGZus{}digit} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{15}\PYG{p}{;}
+                        \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{base} \PYG{o}{=} \PYG{l+m+mi}{31}\PYG{p}{;}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{fillTriangle}\PYG{p}{(}\PYG{n}{mid} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{3}\PYG{p}{,} \PYG{n}{base}\PYG{p}{,} \PYG{n}{mid} \PYG{o}{+} \PYG{l+m+mi}{3}\PYG{p}{,} \PYG{n}{base}\PYG{p}{,} \PYG{n}{mid}\PYG{p}{,}
+                                \PYG{n}{base} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{4}\PYG{p}{,} \PYG{n}{WHITE}\PYG{p}{);}
+
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setFont}\PYG{p}{(}\PYG{n}{TEXT\PYGZus{}FONT}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{getTextBounds}\PYG{p}{(}\PYG{n}{s\PYGZus{}digits}\PYG{p}{,} \PYG{n}{digit\PYGZus{}x}\PYG{p}{,} \PYG{n}{digit\PYGZus{}y}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{x}\PYG{p}{,}
+                                \PYG{o}{\PYGZam{}}\PYG{n}{y}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{w}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{h}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{n}{SCREEN\PYGZus{}WIDTH} \PYG{o}{\PYGZhy{}} \PYG{n}{w} \PYG{o}{+} \PYG{l+m+mi}{6}\PYG{p}{,}
+                                \PYG{n}{digit\PYGZus{}y} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{h} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Delay\PYGZdq{}}\PYG{p}{));}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{getTextBounds}\PYG{p}{(}\PYG{n}{s\PYGZus{}digits}\PYG{p}{,} \PYG{n}{digit\PYGZus{}x}\PYG{p}{,} \PYG{n}{digit\PYGZus{}y}\PYG{p}{,}
+                                \PYG{o}{\PYGZam{}}\PYG{n}{x}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{y}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{w}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{h}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{n}{SCREEN\PYGZus{}WIDTH} \PYG{o}{\PYGZhy{}} \PYG{n}{w} \PYG{o}{+} \PYG{l+m+mi}{6}\PYG{p}{,}
+                                \PYG{n}{digit\PYGZus{}y} \PYG{o}{\PYGZhy{}} \PYG{n}{h} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{);}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}words\PYGZdq{}}\PYG{p}{));}
+
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{display}\PYG{p}{();}
+                        \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{false}\PYG{p}{;}
+                    \PYG{p}{\PYGZcb{}}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+
+            \PYG{k}{case} \PYG{n+nl}{FIFO}\PYG{p}{:}
+                \PYG{p}{\PYGZob{}}
+                    \PYG{n}{draw} \PYG{o}{|=} \PYG{n}{millis}\PYG{p}{()} \PYG{o}{\PYGZhy{}} \PYG{n}{last\PYGZus{}update} \PYG{o}{\PYGZgt{}=} \PYG{n}{update\PYGZus{}interval}\PYG{p}{;}
+                    \PYG{k}{if} \PYG{p}{(}\PYG{n}{draw}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{clearDisplay}\PYG{p}{();}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{setFont}\PYG{p}{(}\PYG{n}{TEXT\PYGZus{}FONT}\PYG{p}{);}
+                        \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{F\PYGZus{}SIZE}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                            \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{x} \PYG{o}{=} \PYG{l+m+mi}{8} \PYG{o}{+} \PYG{p}{(}\PYG{n}{i} \PYG{o}{/} \PYG{l+m+mi}{4}\PYG{p}{)}
+                                \PYG{o}{*} \PYG{n}{SCREEN\PYGZus{}WIDTH} \PYG{o}{/} \PYG{p}{((}\PYG{n}{F\PYGZus{}SIZE} \PYG{o}{/} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{);}
+                            \PYG{k+kt}{int16\PYGZus{}t} \PYG{n}{y} \PYG{o}{=} \PYG{p}{(}\PYG{n}{i} \PYG{o}{\PYGZpc{}} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{8}\PYG{p}{;}
+                            \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{n}{x}\PYG{p}{,} \PYG{n}{y}\PYG{p}{);}
+                            \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{fifo\PYGZus{}flag\PYGZus{}names}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]);}
+                            \PYG{n}{display}\PYG{p}{.}\PYG{n}{setCursor}\PYG{p}{(}\PYG{n}{x} \PYG{o}{+} \PYG{l+m+mi}{4}\PYG{o}{*}\PYG{l+m+mi}{8}\PYG{p}{,} \PYG{n}{y}\PYG{p}{);}
+                            \PYG{c+c1}{// Invert to show understandable logic}
+                            \PYG{n}{display}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{digitalRead}\PYG{p}{(}\PYG{n}{fifo\PYGZus{}flag\PYGZus{}pins}\PYG{p}{[}\PYG{n}{i}\PYG{p}{])}
+                                    \PYG{o}{?} \PYG{l+m+mi}{0} \PYG{o}{:} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+                        \PYG{p}{\PYGZcb{}}
+                        \PYG{n}{display}\PYG{p}{.}\PYG{n}{display}\PYG{p}{();}
+                        \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{false}\PYG{p}{;}
+                        \PYG{n}{last\PYGZus{}update} \PYG{o}{=} \PYG{n}{millis}\PYG{p}{();}
+                    \PYG{p}{\PYGZcb{}}
+
+                    \PYG{n}{press\PYGZus{}menu\PYGZus{}return}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{enc}\PYG{p}{);}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+
+            \PYG{k}{default}\PYG{o}{:}
+                \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Menu error!\PYGZdq{}}\PYG{p}{);}
+                \PYG{k}{break}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+
+        \PYG{c+c1}{// Double\PYGZhy{}press detection}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{menu\PYGZus{}mode} \PYG{o}{!=} \PYG{n}{MENU}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k+kt}{int} \PYG{n}{press} \PYG{o}{=} \PYG{n}{read\PYGZus{}button}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{p}{(}\PYG{n}{enc}\PYG{p}{.}\PYG{n}{btn}\PYG{p}{));}
+            \PYG{k+kt}{int} \PYG{n}{quick} \PYG{o}{=} \PYG{n}{millis}\PYG{p}{()} \PYG{o}{\PYGZhy{}} \PYG{n}{dpress\PYGZus{}time} \PYG{o}{\PYGZlt{}=} \PYG{n}{dpress\PYGZus{}delay}\PYG{p}{;}
+            \PYG{k}{if} \PYG{p}{((}\PYG{n}{dpress} \PYG{o}{==} \PYG{l+m+mi}{0} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{press}\PYG{p}{)}
+                \PYG{o}{||} \PYG{p}{(}\PYG{n}{dpress} \PYG{o}{==} \PYG{l+m+mi}{1} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{o}{!}\PYG{n}{press} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{quick}\PYG{p}{)}
+                \PYG{o}{||} \PYG{p}{(}\PYG{n}{dpress} \PYG{o}{==} \PYG{l+m+mi}{2} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{press} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{quick}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+                \PYG{n}{dpress\PYGZus{}time} \PYG{o}{=} \PYG{n}{millis}\PYG{p}{();}
+                \PYG{n}{dpress}\PYG{o}{++}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if} \PYG{p}{(}\PYG{n}{dpress} \PYG{o}{==} \PYG{l+m+mi}{3} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{o}{!}\PYG{n}{press} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{quick}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{dpress} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                \PYG{n}{menu\PYGZus{}mode} \PYG{o}{=} \PYG{n}{menu\PYGZus{}mode} \PYG{o}{!=} \PYG{n}{MENU} \PYG{o}{?} \PYG{n+nl}{MENU} \PYG{p}{:} \PYG{n}{DELAY}\PYG{p}{;}
+                \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if} \PYG{p}{(}\PYG{o}{!}\PYG{n}{quick}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{dpress} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+\PYG{k+kt}{void} \PYG{n+nf}{press\PYGZus{}menu\PYGZus{}return}\PYG{p}{(}\PYG{n}{rotary\PYGZus{}encoder} \PYG{o}{*}\PYG{n}{e}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{read\PYGZus{}button}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{p}{(}\PYG{n}{e}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{btn}\PYG{p}{)))} \PYG{p}{\PYGZob{}}
+        \PYG{n}{menu\PYGZus{}press} \PYG{o}{=} \PYG{n}{HIGH}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if} \PYG{p}{(}\PYG{n}{menu\PYGZus{}press} \PYG{o}{==} \PYG{n}{HIGH}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Button was pressed and now it is not}
+        \PYG{n}{menu\PYGZus{}press} \PYG{o}{=} \PYG{n}{LOW}\PYG{p}{;}
+        \PYG{n}{menu\PYGZus{}mode} \PYG{o}{=} \PYG{n}{MENU}\PYG{p}{;}
+        \PYG{n}{menu\PYGZus{}press} \PYG{o}{=} \PYG{n}{LOW}\PYG{p}{;}
+        \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{k+kt}{void} \PYG{n+nf}{unknown}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Unknown Command. Type \PYGZsq{}h\PYGZsq{} for help.\PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{serial\PYGZus{}help}\PYG{p}{();}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{k+kt}{void} \PYG{n+nf}{serial\PYGZus{}help}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+    \PYG{l+s}{\PYGZdq{}Time Delay Device Serial Commands}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}=================================}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}mr}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Performs a master reset of FIFO memory.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}pr}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Performs a partial reset of FIFO memory.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}d N}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Sets delay to N words, where N is a decimal number between \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{min\PYGZus{}words} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} and \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{max\PYGZus{}words} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+    \PYG{l+s}{\PYGZdq{}.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{E.g.: \PYGZsq{}d 9\PYGZsq{} and \PYGZsq{}d 101\PYGZsq{} produce delays of 9 and 101 words, respectively.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Values outside the possible range will be clamped, so \PYGZsq{}d 0\PYGZsq{} is the same as \PYGZsq{}d \PYGZdq{}}
+    \PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{min\PYGZus{}words} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+    \PYG{l+s}{\PYGZdq{}\PYGZsq{}.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{\PYGZlt{}time delay\PYGZgt{} = \PYGZlt{}delay words\PYGZgt{} * \PYGZlt{}clock period\PYGZgt{}.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}ph N;\PYGZlt{}data\PYGZgt{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Programs N words of initial history into the FIFO.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{After the semicolon, 2N bytes of big\PYGZhy{}endian data must follow.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{The data are 12\PYGZhy{}bit unsigned code words representing analog signals,}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{where 0x0000 gives \PYGZhy{}2.5V and 0x0FFF gives +2.5V.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}s}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Reports FIFO status.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}x N}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Pauses for N seconds (neglecting serial delays; not precise).}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}i}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Initializes the program.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}q}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Quits the program.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}h H ?}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{Shows this help.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+    \PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{partial\PYGZus{}reset}\PYG{p}{(}\PYG{n}{boolean} \PYG{n}{start}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{long} \PYG{n}{t1}\PYG{p}{,} \PYG{n}{t2}\PYG{p}{;}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Partial Reset ... \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{t1} \PYG{o}{=} \PYG{n}{micros}\PYG{p}{();}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{REN}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WEN}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{RT}\PYG{p}{,}  \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{3}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{PRS}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{3}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{PRS}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{3}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WEN}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{start}\PYG{p}{)} \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+
+    \PYG{n}{t2} \PYG{o}{=} \PYG{n}{micros}\PYG{p}{()} \PYG{o}{\PYGZhy{}} \PYG{n}{t1}\PYG{p}{;}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}done (\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{t2}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} us).\PYGZdq{}}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{master\PYGZus{}reset}\PYG{p}{(}\PYG{n}{boolean} \PYG{n}{start}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{long} \PYG{n}{t1}\PYG{p}{,} \PYG{n}{t2}\PYG{p}{;}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Master Reset ... \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{t1} \PYG{o}{=} \PYG{n}{micros}\PYG{p}{();}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{c+c1}{//digitalWrite(FWFT, HIGH);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{FWFT}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);} \PYG{c+c1}{// Let\PYGZsq{}s try IDT mode}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{LD}\PYG{p}{,}    \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{MRS}\PYG{p}{,}   \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{MRS}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{start}\PYG{p}{)} \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+
+    \PYG{n}{t2} \PYG{o}{=} \PYG{n}{micros}\PYG{p}{()} \PYG{o}{\PYGZhy{}} \PYG{n}{t1}\PYG{p}{;}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}done (\PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{t2}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} us).\PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Device in FWFT with Serial Loading.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{k+kt}{void} \PYG{n+nf}{report\PYGZus{}status}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+        \PYG{l+s}{\PYGZdq{}FIFO Status}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}
+        \PYG{l+s}{\PYGZdq{}===========}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+
+    \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{F\PYGZus{}SIZE}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZti{}\PYGZdq{}}\PYG{p}{));}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{fifo\PYGZus{}flag\PYGZus{}names}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]);}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{digitalRead}\PYG{p}{(}\PYG{n}{fifo\PYGZus{}flag\PYGZus{}pins}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]),} \PYG{n}{DEC}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{();}
+
+    \PYG{c+cp}{\PYGZsh{}ifdef DEBUG}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{words\PYGZus{}digit}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{words} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{ipow}\PYG{p}{(}\PYG{l+m+mi}{3}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{ipow}\PYG{p}{(}\PYG{l+m+mi}{3}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{ipow}\PYG{p}{(}\PYG{l+m+mi}{3}\PYG{p}{,} \PYG{l+m+mi}{5}\PYG{p}{));}
+    \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// DEBUG}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{k+kt}{void} \PYG{n+nf}{pause}\PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{n}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{n} \PYG{o}{\PYGZhy{}} \PYG{n}{i}\PYG{p}{);}
+        \PYG{n}{delay}\PYG{p}{(}\PYG{l+m+mi}{1000}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}0.\PYGZdq{}}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{set\PYGZus{}delay}\PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n}\PYG{p}{,} \PYG{n}{boolean} \PYG{n}{start}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{unsigned} \PYG{k+kt}{int} \PYG{n}{m}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{bits}\PYG{p}{;}
+
+    \PYG{n}{n} \PYG{o}{=} \PYG{n}{clamp}\PYG{p}{(}\PYG{n}{n} \PYG{o}{\PYGZhy{}} \PYG{n}{off\PYGZus{}words}\PYG{p}{,} \PYG{n}{min\PYGZus{}words}\PYG{p}{,} \PYG{n}{max\PYGZus{}words}\PYG{p}{);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{n} \PYG{o}{==} \PYG{n}{words} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{start}\PYG{p}{)} \PYG{k}{return}\PYG{p}{;}
+    \PYG{n}{words} \PYG{o}{=} \PYG{n}{n}\PYG{p}{;}
+    \PYG{n}{m} \PYG{o}{=} \PYG{n}{max\PYGZus{}words} \PYG{o}{\PYGZhy{}} \PYG{n}{n}\PYG{p}{;}
+
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Sending a \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{n}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZhy{}word delay ... \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{LD}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{SEN}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{2}\PYG{p}{);}
+
+    \PYG{c+c1}{// The following number is defined because PAF triggers at the given}
+    \PYG{c+c1}{// number of words AWAY FROM the end, not AT the given word like PAE.}
+    \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{36} \PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{bits} \PYG{o}{=} \PYG{n}{i} \PYG{o}{==} \PYG{l+m+mi}{0} \PYG{o}{?} \PYG{l+m+mi}{1} \PYG{o}{:} \PYG{n}{bitRead}\PYG{p}{(}\PYG{n}{m}\PYG{p}{,} \PYG{n}{i} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{18}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{FWFT}\PYG{p}{,} \PYG{n}{bits}\PYG{p}{);}
+        \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+        \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{LD}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{SEN}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}done. Resetting: \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{partial\PYGZus{}reset}\PYG{p}{(}\PYG{n}{start}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{set\PYGZus{}fifo\PYGZus{}delay}\PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n}\PYG{p}{,} \PYG{n}{boolean} \PYG{n}{start}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{set\PYGZus{}delay}\PYG{p}{(}\PYG{n}{n} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{,} \PYG{n}{start}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{initialize}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WEN}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{REN}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Initiated program.\PYGZdq{}}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{quit}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WEN}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{REN}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Quit program.\PYGZdq{}}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{int} \PYG{n+nf}{read\PYGZus{}encoder}\PYG{p}{(}\PYG{n}{rotary\PYGZus{}encoder} \PYG{o}{*}\PYG{n}{e}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{static} \PYG{k+kt}{int8\PYGZus{}t} \PYG{n}{enc\PYGZus{}states}\PYG{p}{[}\PYG{l+m+mi}{4}\PYG{p}{][}\PYG{l+m+mi}{4}\PYG{p}{]} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+        \PYG{p}{\PYGZob{}} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{,}  \PYG{l+m+mi}{1}\PYG{p}{,}  \PYG{l+m+mi}{0}\PYG{p}{\PYGZcb{},}
+        \PYG{p}{\PYGZob{}} \PYG{l+m+mi}{1}\PYG{p}{,}  \PYG{l+m+mi}{0}\PYG{p}{,}  \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{\PYGZcb{},}
+        \PYG{p}{\PYGZob{}}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{,}  \PYG{l+m+mi}{0}\PYG{p}{,}  \PYG{l+m+mi}{0}\PYG{p}{,}  \PYG{l+m+mi}{1}\PYG{p}{\PYGZcb{},}
+        \PYG{p}{\PYGZob{}} \PYG{l+m+mi}{0}\PYG{p}{,}  \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{,}  \PYG{l+m+mi}{0}\PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{};}
+    \PYG{k}{static} \PYG{k+kt}{uint8\PYGZus{}t} \PYG{n}{old\PYGZus{}AB} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k+kt}{int8\PYGZus{}t} \PYG{n}{direction}\PYG{p}{;}
+    \PYG{k+kt}{uint8\PYGZus{}t} \PYG{n}{AB} \PYG{o}{=} \PYG{n}{digitalRead}\PYG{p}{(}\PYG{n}{e}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{a}\PYG{p}{)} \PYG{o}{\PYGZlt{}\PYGZlt{}} \PYG{l+m+mi}{1} \PYG{o}{|} \PYG{n}{digitalRead}\PYG{p}{(}\PYG{n}{e}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{b}\PYG{p}{);}
+
+    \PYG{n}{direction} \PYG{o}{=} \PYG{n}{enc\PYGZus{}states}\PYG{p}{[}\PYG{n}{old\PYGZus{}AB}\PYG{p}{][}\PYG{n}{AB}\PYG{p}{];}
+    \PYG{n}{old\PYGZus{}AB} \PYG{o}{=} \PYG{n}{AB}\PYG{p}{;}
+
+    \PYG{k}{return} \PYG{n}{direction}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{int32\PYGZus{}t} \PYG{n+nf}{clamp}\PYG{p}{(}\PYG{k+kt}{int32\PYGZus{}t} \PYG{n}{x}\PYG{p}{,} \PYG{k+kt}{int32\PYGZus{}t} \PYG{n}{min}\PYG{p}{,} \PYG{k+kt}{int32\PYGZus{}t} \PYG{n}{max}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{n}{x} \PYG{o}{\PYGZlt{}=} \PYG{n}{min} \PYG{o}{?} \PYG{n+nl}{min} \PYG{p}{:} \PYG{n}{x} \PYG{o}{\PYGZgt{}=} \PYG{n}{max} \PYG{o}{?} \PYG{n+nl}{max} \PYG{p}{:} \PYG{n}{x}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{int} \PYG{n+nf}{ipow}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{base}\PYG{p}{,} \PYG{k+kt}{unsigned} \PYG{k+kt}{int} \PYG{n}{exp}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{result} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+
+    \PYG{k}{for} \PYG{p}{(;} \PYG{n}{exp}\PYG{p}{;} \PYG{n}{base} \PYG{o}{*=} \PYG{n}{base}\PYG{p}{,} \PYG{n}{exp} \PYG{o}{\PYGZgt{}\PYGZgt{}=} \PYG{l+m+mi}{1}\PYG{p}{)}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{exp} \PYG{o}{\PYGZam{}} \PYG{l+m+mi}{1}\PYG{p}{)}
+            \PYG{n}{result} \PYG{o}{*=} \PYG{n}{base}\PYG{p}{;}
+
+    \PYG{k}{return} \PYG{n}{result}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n+nf}{enc\PYGZus{}adjust}\PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{o}{*}\PYG{n}{n}\PYG{p}{,} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{o}{*}\PYG{n}{digit}\PYG{p}{,} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n\PYGZus{}min}\PYG{p}{,}
+        \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n\PYGZus{}max}\PYG{p}{,} \PYG{n}{boolean} \PYG{n}{reverse}\PYG{p}{,} \PYG{n}{boolean} \PYG{n}{dreverse}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int}     \PYG{n}{direction}\PYG{p}{;}
+    \PYG{k+kt}{int32\PYGZus{}t} \PYG{n}{count} \PYG{o}{=} \PYG{o}{*}\PYG{n}{n}\PYG{p}{;}
+    \PYG{n}{direction} \PYG{o}{=} \PYG{n}{read\PYGZus{}encoder}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{enc}\PYG{p}{);}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{direction}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{read\PYGZus{}button}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{p}{(}\PYG{n}{enc}\PYG{p}{.}\PYG{n}{btn}\PYG{p}{)))} \PYG{p}{\PYGZob{}}
+            \PYG{o}{*}\PYG{n}{digit} \PYG{o}{=} \PYG{n}{clamp}\PYG{p}{(}\PYG{o}{*}\PYG{n}{digit} \PYG{o}{+} \PYG{n}{direction} \PYG{o}{*} \PYG{p}{(}\PYG{n}{dreverse} \PYG{o}{?} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1} \PYG{o}{:} \PYG{l+m+mi}{1}\PYG{p}{),} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{5}\PYG{p}{);}
+            \PYG{c+cp}{\PYGZsh{}ifdef DEBUG}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Button press: \PYGZdq{}}\PYG{p}{));}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{o}{*}\PYG{n}{digit}\PYG{p}{);}
+            \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// DEBUG}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+            \PYG{n}{count} \PYG{o}{=} \PYG{n}{clamp}\PYG{p}{(}\PYG{n}{count} \PYG{o}{+} \PYG{n}{direction} \PYG{o}{*} \PYG{p}{(}\PYG{n}{reverse} \PYG{o}{?} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1} \PYG{o}{:} \PYG{l+m+mi}{1}\PYG{p}{)}
+                    \PYG{o}{*} \PYG{n}{ipow}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{,} \PYG{o}{*}\PYG{n}{digit}\PYG{p}{),} \PYG{n}{n\PYGZus{}min}\PYG{p}{,} \PYG{n}{n\PYGZus{}max}\PYG{p}{);}
+            \PYG{c+cp}{\PYGZsh{}ifdef DEBUG}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Count: \PYGZdq{}}\PYG{p}{));}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{count}\PYG{p}{);}
+            \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// DEBUG}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+        \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+        \PYG{n}{dpress} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{k}{return} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t}\PYG{p}{)} \PYG{n}{count} \PYG{o}{+} \PYG{n}{off\PYGZus{}words}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n+nf}{enc\PYGZus{}adjust\PYGZus{}nodigit}\PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{o}{*}\PYG{n}{n}\PYG{p}{,} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n\PYGZus{}min}\PYG{p}{,} \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n\PYGZus{}max}\PYG{p}{,}
+        \PYG{n}{boolean} \PYG{n}{reverse}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int}     \PYG{n}{direction}\PYG{p}{;}
+    \PYG{k+kt}{int32\PYGZus{}t} \PYG{n}{count} \PYG{o}{=} \PYG{o}{*}\PYG{n}{n}\PYG{p}{;}
+    \PYG{n}{direction} \PYG{o}{=} \PYG{n}{read\PYGZus{}encoder}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{enc}\PYG{p}{)} \PYG{o}{*} \PYG{p}{(}\PYG{n}{reverse} \PYG{o}{?} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1} \PYG{o}{:} \PYG{l+m+mi}{1}\PYG{p}{);}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{direction}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{count} \PYG{o}{=} \PYG{n}{clamp}\PYG{p}{(}\PYG{n}{count} \PYG{o}{+} \PYG{n}{direction}\PYG{p}{,} \PYG{n}{n\PYGZus{}min}\PYG{p}{,} \PYG{n}{n\PYGZus{}max}\PYG{p}{);}
+        \PYG{c+cp}{\PYGZsh{}ifdef DEBUG}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}ND Count: \PYGZdq{}}\PYG{p}{);}
+        \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{count}\PYG{p}{);}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// DEBUG}
+        \PYG{c+cp}{\PYGZsh{}ifdef SCREEN}
+        \PYG{n}{draw} \PYG{o}{=} \PYG{n+nb}{true}\PYG{p}{;}
+        \PYG{n}{dpress} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+        \PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCREEN}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{k}{return} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t}\PYG{p}{)} \PYG{n}{count}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{int} \PYG{n+nf}{read\PYGZus{}button}\PYG{p}{(}\PYG{n}{button} \PYG{o}{*}\PYG{n}{button}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{reading} \PYG{o}{=} \PYG{n}{digitalRead}\PYG{p}{(}\PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{p}\PYG{p}{);}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{reading} \PYG{o}{!=} \PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{last\PYGZus{}state}\PYG{p}{)}
+        \PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{last\PYGZus{}debounce\PYGZus{}time} \PYG{o}{=} \PYG{n}{millis}\PYG{p}{();}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{millis}\PYG{p}{()} \PYG{o}{\PYGZhy{}} \PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{last\PYGZus{}debounce\PYGZus{}time} \PYG{o}{\PYGZgt{}} \PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{debounce\PYGZus{}delay}\PYG{p}{)}
+        \PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{state} \PYG{o}{=} \PYG{n}{reading}\PYG{p}{;}
+
+    \PYG{k}{return} \PYG{n}{button}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{last\PYGZus{}state} \PYG{o}{=} \PYG{n}{reading}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef HIST}
+\PYG{k+kt}{int} \PYG{n+nf}{prog\PYGZus{}hist}\PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{n}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{// Reads n code words (uint16\PYGZus{}t values for DAC) and programs them into the}
+    \PYG{c+c1}{// FIFO memory. Little\PYGZhy{}endian.}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{nwords} \PYG{o}{=} \PYG{n}{n}\PYG{p}{;}
+    \PYG{n}{n} \PYG{o}{*=} \PYG{l+m+mi}{2}\PYG{p}{;} \PYG{c+c1}{// Words to bytes.}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{bufs} \PYG{o}{=} \PYG{l+m+mi}{0u}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{bytes} \PYG{o}{=} \PYG{l+m+mi}{0u}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{col} \PYG{o}{=} \PYG{l+m+mi}{8}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{cols} \PYG{o}{=} \PYG{l+m+mi}{2}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{row} \PYG{o}{=} \PYG{n}{col} \PYG{o}{*} \PYG{n}{cols}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{hex}\PYG{p}{[}\PYG{l+m+mi}{16}\PYG{p}{];}
+    \PYG{n}{byte} \PYG{n}{msb}\PYG{p}{,} \PYG{n}{lsb}\PYG{p}{,} \PYG{n}{sbyte}\PYG{p}{;}
+    \PYG{k+kt}{uint16\PYGZus{}t} \PYG{n}{data}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{read\PYGZus{}bytes}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{buf\PYGZus{}remaining}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{adc\PYGZus{}off} \PYG{o}{=} \PYG{l+m+mi}{3u}\PYG{p}{;}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{adc\PYGZus{}ins} \PYG{o}{=} \PYG{l+m+mi}{0u}\PYG{p}{;}
+    \PYG{n}{CRC32} \PYG{n}{crc}\PYG{p}{;}
+
+    \PYG{c+c1}{// Enter programming mode.}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{STRIG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Programming \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{nwords}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} words of history...}\PYG{l+s+se}{\PYGZbs{}n\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{master\PYGZus{}reset}\PYG{p}{(}\PYG{n+nb}{false}\PYG{p}{);}
+    \PYG{c+c1}{//set\PYGZus{}fifo\PYGZus{}delay(nwords, false);}
+    \PYG{n}{set\PYGZus{}delay}\PYG{p}{(}\PYG{n}{nwords}\PYG{p}{,} \PYG{n+nb}{false}\PYG{p}{);}
+
+    \PYG{c+c1}{// Program the data one hist[] buffer at a time.}
+    \PYG{k}{while} \PYG{p}{(}\PYG{n}{bytes} \PYG{o}{\PYGZlt{}} \PYG{n}{n}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{while} \PYG{p}{(}\PYG{o}{!}\PYG{n}{Serial}\PYG{p}{.}\PYG{n}{available}\PYG{p}{());}
+
+        \PYG{n}{buf\PYGZus{}remaining} \PYG{o}{=} \PYG{n}{min}\PYG{p}{(}\PYG{n}{HBUF\PYGZus{}SIZE}\PYG{p}{,} \PYG{n}{n} \PYG{o}{\PYGZhy{}} \PYG{n}{bytes}\PYG{p}{);}
+        \PYG{n}{read\PYGZus{}bytes} \PYG{o}{=} \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{readBytes}\PYG{p}{(}\PYG{n}{hist}\PYG{p}{,} \PYG{n}{buf\PYGZus{}remaining}\PYG{p}{);}
+        \PYG{n}{bytes} \PYG{o}{+=} \PYG{n}{read\PYGZus{}bytes}\PYG{p}{;}
+        \PYG{n}{boolean} \PYG{n}{last} \PYG{o}{=} \PYG{n}{read\PYGZus{}bytes} \PYG{o}{\PYGZlt{}} \PYG{n}{HBUF\PYGZus{}SIZE}\PYG{p}{;}
+
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{read\PYGZus{}bytes} \PYG{o}{!=} \PYG{n}{buf\PYGZus{}remaining}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Error reading history data! (Received \PYGZdq{}}\PYG{p}{));}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{bytes}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} bytes, but expected \PYGZdq{}}\PYG{p}{));}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{n}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} bytes.)\PYGZdq{}}\PYG{p}{));}
+            \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+        \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{j} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{j} \PYG{o}{\PYGZlt{}} \PYG{p}{(}\PYG{n}{read\PYGZus{}bytes} \PYG{o}{/} \PYG{n}{row}\PYG{p}{)} \PYG{o}{+} \PYG{p}{(}\PYG{n}{last} \PYG{o}{?} \PYG{l+m+mi}{1} \PYG{o}{:} \PYG{l+m+mi}{0}\PYG{p}{);} \PYG{n}{j}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{end\PYGZus{}bytes} \PYG{o}{=} \PYG{n}{last} \PYG{o}{?} \PYG{n}{read\PYGZus{}bytes} \PYG{o}{\PYGZpc{}} \PYG{n+nl}{row} \PYG{p}{:} \PYG{n}{row}\PYG{p}{;}
+
+            \PYG{c+c1}{// The actual programming}
+            \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{k} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{k} \PYG{o}{\PYGZlt{}} \PYG{n}{end\PYGZus{}bytes}\PYG{p}{;} \PYG{n}{k}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{c+c1}{// This may be decreased, depending upon signal speed}
+                \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{100}\PYG{p}{);}
+                \PYG{n}{sbyte} \PYG{o}{=} \PYG{n}{hist}\PYG{p}{[}\PYG{n}{row}\PYG{o}{*}\PYG{n}{j} \PYG{o}{+} \PYG{n}{k}\PYG{p}{];}
+                \PYG{n}{crc}\PYG{p}{.}\PYG{n}{update}\PYG{p}{(}\PYG{n}{sbyte}\PYG{p}{);}
+                \PYG{k}{if} \PYG{p}{(}\PYG{n}{k} \PYG{o}{\PYGZpc{}} \PYG{l+m+mi}{2} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{lsb} \PYG{o}{=} \PYG{n}{sbyte}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{msb} \PYG{o}{=} \PYG{n}{sbyte}\PYG{p}{;}
+                    \PYG{c+c1}{// Programming circuitry inverts, so reinvert}
+                    \PYG{n}{data} \PYG{o}{=} \PYG{l+m+mh}{0x0FFF} \PYG{o}{\PYGZhy{}} \PYG{p}{((}\PYG{n}{msb} \PYG{o}{\PYGZlt{}\PYGZlt{}} \PYG{l+m+mi}{8}\PYG{p}{)} \PYG{o}{|} \PYG{n}{lsb}\PYG{p}{);}
+                    \PYG{c+c1}{//data = ((msb \PYGZlt{}\PYGZlt{} 8) | lsb); // Inverted}
+                    \PYG{n}{analogWrite}\PYG{p}{(}\PYG{n}{PROG\PYGZus{}D}\PYG{p}{,} \PYG{n}{data}\PYG{p}{);}
+                    \PYG{c+c1}{// This may be decreased, depending upon signal speed}
+                    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{1000}\PYG{p}{);}
+                    \PYG{c+c1}{// Write ADC output N\PYGZhy{}3 to the FIFO before latching in}
+                    \PYG{c+c1}{// the next in put to the ADC.}
+                    \PYG{k}{if} \PYG{p}{(}\PYG{n}{adc\PYGZus{}ins} \PYG{o}{\PYGZgt{}=} \PYG{n}{adc\PYGZus{}off}\PYG{p}{)} \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+                    \PYG{c+c1}{// These microsecond delays are probably unnecessary.}
+                    \PYG{c+c1}{// Check FIFO clock hold times.}
+                    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+                    \PYG{k}{if} \PYG{p}{(}\PYG{n}{adc\PYGZus{}ins} \PYG{o}{\PYGZgt{}=} \PYG{n}{adc\PYGZus{}off}\PYG{p}{)} \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+                    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+                    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+                    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+                    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+                    \PYG{k}{if} \PYG{p}{(}\PYG{n}{adc\PYGZus{}ins} \PYG{o}{\PYGZlt{}} \PYG{n}{adc\PYGZus{}off}\PYG{p}{)} \PYG{n}{adc\PYGZus{}ins}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{c+c1}{// The last 3 (adc\PYGZus{}off) history data words remain in the ADC.}
+            \PYG{c+c1}{// They will be clocked in after the switch to normal operation}
+            \PYG{c+c1}{// (external WCLK).}
+
+            \PYG{c+c1}{// Printing a hexdump back}
+            \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{hex}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}06X:}\PYG{l+s+se}{\PYGZbs{}t}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{bufs} \PYG{o}{*} \PYG{n}{HBUF\PYGZus{}SIZE} \PYG{o}{+} \PYG{n}{j} \PYG{o}{*} \PYG{n}{row}\PYG{p}{);}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{hex}\PYG{p}{);}
+            \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{k} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{k} \PYG{o}{\PYGZlt{}} \PYG{n}{end\PYGZus{}bytes}\PYG{p}{;} \PYG{n}{k}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{hex}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}02X\PYGZdq{}}\PYG{p}{,} \PYG{n}{hist}\PYG{p}{[}\PYG{n}{row}\PYG{o}{*}\PYG{n}{j} \PYG{o}{+} \PYG{n}{k}\PYG{p}{]);}
+                \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{hex}\PYG{p}{);}
+                \PYG{k}{if} \PYG{p}{(}\PYG{n}{k} \PYG{o}{\PYGZpc{}} \PYG{n}{col} \PYG{o}{==} \PYG{n}{col} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{k}{if} \PYG{p}{(}\PYG{n}{last}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Pad last row}
+                \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{k} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{k} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{p}{(}\PYG{n}{row} \PYG{o}{\PYGZhy{}} \PYG{n}{end\PYGZus{}bytes}\PYG{p}{);} \PYG{n}{k}\PYG{o}{++}\PYG{p}{)}
+                    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}t\PYGZsq{}}\PYG{p}{);}
+            \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{k} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{k} \PYG{o}{\PYGZlt{}} \PYG{n}{end\PYGZus{}bytes}\PYG{p}{;} \PYG{n}{k}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{byte} \PYG{n}{b} \PYG{o}{=} \PYG{n}{hist}\PYG{p}{[}\PYG{n}{row}\PYG{o}{*}\PYG{n}{j} \PYG{o}{+} \PYG{n}{k}\PYG{p}{];}
+                \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{b} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{32} \PYG{o}{?} \PYG{l+s+sc}{\PYGZsq{}.\PYGZsq{}} \PYG{o}{:} \PYG{p}{(}\PYG{k+kt}{char}\PYG{p}{)} \PYG{n}{b}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{();}
+        \PYG{p}{\PYGZcb{}}
+
+        \PYG{n}{bufs}\PYG{o}{++}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}CRC32: \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{crc}\PYG{p}{.}\PYG{n}{finalize}\PYG{p}{(),} \PYG{n}{HEX}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{Done programming history.\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}Waiting for start command (\PYGZsq{}go\PYGZsq{}).\PYGZdq{}}\PYG{p}{));}
+
+    \PYG{k}{return} \PYG{l+m+mi}{1}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// HIST}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef HIST}
+\PYG{k+kt}{void} \PYG{n+nf}{start}\PYG{p}{()}
+\PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{// Start normal delay operation after programming the history.}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{STRIG}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Started.\PYGZdq{}}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// HIST}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{k+kt}{void} \PYG{n+nf}{single\PYGZus{}clock}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{CLK1}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{c+cp}{\PYGZsh{}ifdef SCONTROL}
+\PYG{k+kt}{void} \PYG{n+nf}{dual\PYGZus{}clock}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{CLK1}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cp}{\PYGZsh{}endif }\PYG{c+c1}{// SCONTROL}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{prog\PYGZus{}debug}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{uint32\PYGZus{}t} \PYG{n}{nwords} \PYG{o}{=} \PYG{l+m+mi}{1} \PYG{o}{\PYGZlt{}\PYGZlt{}} \PYG{l+m+mi}{13}\PYG{p}{;}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{STRIG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}DEBUG: Programming \PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{nwords}\PYG{p}{,} \PYG{n}{DEC}\PYG{p}{);}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{print}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}\PYG{l+s}{\PYGZdq{} words of history...}\PYG{l+s+se}{\PYGZbs{}n\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+    \PYG{n}{master\PYGZus{}reset}\PYG{p}{(}\PYG{n+nb}{false}\PYG{p}{);}
+    \PYG{n}{set\PYGZus{}fifo\PYGZus{}delay}\PYG{p}{(}\PYG{n}{nwords}\PYG{p}{,} \PYG{n+nb}{false}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{nPROG}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{delayMicroseconds}\PYG{p}{(}\PYG{l+m+mi}{10}\PYG{p}{);}
+    \PYG{c+c1}{// Does not account for first three words into ADC, but OK for debugging}
+    \PYG{k}{for} \PYG{p}{(}\PYG{k+kt}{uint16\PYGZus{}t} \PYG{n}{triangle} \PYG{o}{=} \PYG{l+m+mi}{0u} \PYG{p}{;;} \PYG{n}{triangle}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{//for (uint16\PYGZus{}t triangle = 0u; triangle \PYGZlt{} nwords; triangle++) \PYGZob{}}
+        \PYG{c+c1}{// High 4 bits are discarded. Subtraction inverts.}
+        \PYG{n}{analogWrite}\PYG{p}{(}\PYG{n}{PROG\PYGZus{}D}\PYG{p}{,} \PYG{p}{((}\PYG{l+m+mi}{1}\PYG{o}{\PYGZlt{}\PYGZlt{}}\PYG{l+m+mi}{12}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{4} \PYG{o}{*} \PYG{n}{triangle}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+        \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{Serial}\PYG{p}{.}\PYG{n}{println}\PYG{p}{(}\PYG{n}{F}\PYG{p}{(}
+    \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{DEBUG: Done programming history.\PYGZdq{}}
+    \PYG{l+s}{\PYGZdq{}Waiting for start command (\PYGZsq{}go\PYGZsq{}).\PYGZdq{}}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{prog\PYGZus{}clock\PYGZus{}debug}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{WCLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{HIGH}\PYG{p}{);}
+    \PYG{n}{digitalWrite}\PYG{p}{(}\PYG{n}{ADC\PYGZus{}CLK\PYGZus{}S}\PYG{p}{,} \PYG{n}{LOW}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// vim:ts=4:sts=4:sw=4:et:}
+\end{Verbatim}

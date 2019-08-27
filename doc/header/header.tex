@@ -1,0 +1,47 @@
+%        File: header.tex
+%     Created: Mon Aug 26 08:00 PM 2019 P
+% Last Change: Mon Aug 26 08:00 PM 2019 P
+%
+\documentclass[11pt,letterpaper]{article}
+
+\title{Time Delay Device Files Documentation}
+\author{Alex Striff}
+\date{August 26, 2019}
+
+\begin{document}
+\maketitle
+
+All of the documentation concerning the auxilliary files for the project is
+assembled here. What follows is a description of the contents of each directory.
+
+\begin{itemize}
+  \item \texttt{adjustable-delay}: Schematics and ideas for implementing
+    adjustable delay in the circuit. The subdirectory \texttt{Linear} contains a
+    tenative schematic (KiCAD files and \textsc{pdf}) of a circuit that
+    implements the different clock frequencies by counting, while
+    \texttt{Arbitrary} gives what I have so far in creating an arbitrary delay
+    circuit.
+  \item \texttt{arduino}: The code uploaded to the Arduino Due.
+  \item \texttt{characterization}: Contains many different parts of the
+    code used to analyze the characterization data for the device, and includes
+    instructions on how to program the history.
+  \item \texttt{doc}: The top-level documentation directory (this one).
+  \item \texttt{fifo-p3f}: The KiCAD files for the device, as well as a
+    schematic \textsc{pdf} and the gerber files that I sent for manufacture.
+  \item \texttt{figures}: The images and GNUPlot code used to create the figures
+    for the paper.\footnote{\emph{Spumpus} stands for spiky lumpus, where
+      \emph{lumpus} refers to a lumpy-looking signal. We want a strange signal
+    for the programming to demonstrate that it is really \emph{arbitrary}.}
+  \item \texttt{program-rescaling}: The code used to calculate the gain and
+    offset resistor values to be optimal, given the constraints of E-series
+    values and the overall resistances needed.
+  \item \texttt{triangle}: The code used to generate the spumpus (initial
+    history signal) for the triangle-\textsc{dde} (relay-control) circuit in the
+    paper. This is a good starting point if you want to program something
+    different.
+\end{itemize}
+
+\end{document}
+
+
+

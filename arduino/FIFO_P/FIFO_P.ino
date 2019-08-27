@@ -6,11 +6,11 @@
  * For more information, contact Lucas Illing <illing@reed.edu>.
  *
  * Version  Date        Author       Changes
- * -------  ----------  -----------  -----------------------------------------------
+ * -------  ----------  -----------  -------------------------------------------
  * v1.0     2016-12-15  Edgar Perez  Prototype completed.
  * v2.0     2019-07-XX  Alex Striff  Modified for publication board.
  *
- ********************************************************************************/
+ ******************************************************************************/
 
 // Code options (feature selection)
 #define SCREEN   // Uncomment to enable screen output
@@ -342,7 +342,6 @@ void loop(void)
     for (int i = 0; i < SBLEN; i++)
         sb[i] = '\0';
 
-    // TODO: Add commands to change single/double clock.
     // TODO: Update help.
     if (Serial.available() > 0) {
         Serial.readBytesUntil(';', sb, SBLEN);
@@ -401,7 +400,8 @@ void loop(void)
     if (screen) {
         switch (menu_mode) {
             case MENU:
-                menu_pos = enc_adjust_nodigit(&menu_pos, MENU + 1, MENU_MODES - 1, true);
+                menu_pos = enc_adjust_nodigit(&menu_pos,
+                        MENU + 1, MENU_MODES - 1, true);
                 if (draw) {
                     display.clearDisplay();
                     display.setFont(TEXT_FONT);
@@ -414,14 +414,16 @@ void loop(void)
 
                     int16_t alt = ((menu_pos - 1) / 4) * SCREEN_WIDTH;
                     int16_t mid = 2 + ((menu_pos - 1) % 4) * 8;
-                    display.fillTriangle(alt, mid - 2, alt, mid + 2, alt + 3, mid, WHITE);
+                    display.fillTriangle(alt, mid - 2, alt, mid + 2, alt + 3,
+                            mid, WHITE);
                     display.display();
                     draw = false;
                 }
                 
                 if (read_button(&(enc.btn))) {
                     menu_press = 1;
-                } else if (menu_press == 1) { // button was pressed and now it is not
+                } else if (menu_press == 1) {
+                    // button was pressed and now it is not
                     menu_mode = (enum menu_mode) menu_pos;
                     menu_press = 0;
                     draw = true;
@@ -431,7 +433,8 @@ void loop(void)
               
             case DELAY:
                 { // Surrounding block to disambiguate scope
-                    set_delay(enc_adjust(&words, &words_digit, count_min, count_max, false, false), true);
+                    set_delay(enc_adjust(&words, &words_digit, count_min,
+                                count_max, false, false), true);
                     int16_t  x, y;
                     uint16_t w, h;
                     int16_t digit_x = 0;
@@ -447,14 +450,19 @@ void loop(void)
                         
                         int16_t mid = 6 + (6 - words_digit - 1) * 15;
                         int16_t base = 31;
-                        display.fillTriangle(mid - 3, base, mid + 3, base, mid, base - 4, WHITE);
+                        display.fillTriangle(mid - 3, base, mid + 3, base, mid,
+                                base - 4, WHITE);
 
                         display.setFont(TEXT_FONT);
-                        display.getTextBounds(s_digits, digit_x, digit_y, &x, &y, &w, &h);
-                        display.setCursor(SCREEN_WIDTH - w + 6, digit_y - 2*h + 1);
+                        display.getTextBounds(s_digits, digit_x, digit_y, &x,
+                                &y, &w, &h);
+                        display.setCursor(SCREEN_WIDTH - w + 6,
+                                digit_y - 2*h + 1);
                         display.print(F("Delay"));
-                        display.getTextBounds(s_digits, digit_x, digit_y, &x, &y, &w, &h);
-                        display.setCursor(SCREEN_WIDTH - w + 6, digit_y - h + 1);
+                        display.getTextBounds(s_digits, digit_x, digit_y,
+                                &x, &y, &w, &h);
+                        display.setCursor(SCREEN_WIDTH - w + 6,
+                                digit_y - h + 1);
                         display.print(F("words"));
                         
                         display.display();
@@ -470,12 +478,15 @@ void loop(void)
                         display.clearDisplay();
                         display.setFont(TEXT_FONT);
                         for (size_t i = 0; i < F_SIZE; i++) {
-                            int16_t x = 8 + (i / 4) * SCREEN_WIDTH / ((F_SIZE / 4) + 1);
+                            int16_t x = 8 + (i / 4)
+                                * SCREEN_WIDTH / ((F_SIZE / 4) + 1);
                             int16_t y = (i % 4) * 8;
                             display.setCursor(x, y);
                             display.print(fifo_flag_names[i]);
                             display.setCursor(x + 4*8, y);
-                            display.print(digitalRead(fifo_flag_pins[i]) ? 0 : 1, DEC); // Invert to show understandable logic
+                            // Invert to show understandable logic
+                            display.print(digitalRead(fifo_flag_pins[i])
+                                    ? 0 : 1, DEC);
                         }
                         display.display();
                         draw = false;
@@ -539,34 +550,34 @@ void unknown(void)
 void serial_help(void)
 {
     Serial.print(F(
-                "Time Delay Device Serial Commands\n"
-                "=================================\n"
-                "mr\tPerforms a master reset of FIFO memory.\n"
-                "pr\tPerforms a partial reset of FIFO memory.\n"
-                "d N\tSets delay to N words, where N is a decimal number between "));
+    "Time Delay Device Serial Commands\n"
+    "=================================\n"
+    "mr\tPerforms a master reset of FIFO memory.\n"
+    "pr\tPerforms a partial reset of FIFO memory.\n"
+    "d N\tSets delay to N words, where N is a decimal number between "));
     Serial.print(min_words + off_words, DEC);
     Serial.print(F(" and "));
     Serial.print(max_words + off_words, DEC);
     Serial.print(F(
-                ".\n"
-                "\tE.g.: 'd 9' and 'd 101' produce delays of 9 and 101 words, respectively.\n"
-                "\tValues outside the possible range will be clamped, so 'd 0' is the same as 'd "
-                ));
+    ".\n"
+    "\tE.g.: 'd 9' and 'd 101' produce delays of 9 and 101 words, respectively.\n"
+    "\tValues outside the possible range will be clamped, so 'd 0' is the same as 'd "
+    ));
     Serial.print(min_words + off_words, DEC);
     Serial.print(F(
-                "'.\n"
-                "\t<time delay> = <delay words> * <clock period>.\n"
-                "ph N;<data>\tPrograms N words of initial history into the FIFO.\n"
-                "\tAfter the semicolon, 2N bytes of big-endian data must follow.\n"
-                "\tThe data are 12-bit unsigned code words representing analog signals,\n"
-                "\twhere 0x0000 gives -2.5V and 0x0FFF gives +2.5V.\n"
-                "s\tReports FIFO status.\n"
-                "x N\tPauses for N seconds (neglecting serial delays; not precise).\n"
-                "i\tInitializes the program.\n"
-                "q\tQuits the program.\n"
-                "h H ?\tShows this help.\n"
-                "\n"
-                ));
+    "'.\n"
+    "\t<time delay> = <delay words> * <clock period>.\n"
+    "ph N;<data>\tPrograms N words of initial history into the FIFO.\n"
+    "\tAfter the semicolon, 2N bytes of big-endian data must follow.\n"
+    "\tThe data are 12-bit unsigned code words representing analog signals,\n"
+    "\twhere 0x0000 gives -2.5V and 0x0FFF gives +2.5V.\n"
+    "s\tReports FIFO status.\n"
+    "x N\tPauses for N seconds (neglecting serial delays; not precise).\n"
+    "i\tInitializes the program.\n"
+    "q\tQuits the program.\n"
+    "h H ?\tShows this help.\n"
+    "\n"
+    ));
 }
 #endif // SCONTROL
 
@@ -758,7 +769,8 @@ int ipow(int base, unsigned int exp)
 }
 
 
-uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max, boolean reverse, boolean dreverse)
+uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min,
+        uint32_t n_max, boolean reverse, boolean dreverse)
 {
     int     direction;
     int32_t count = *n;
@@ -772,7 +784,8 @@ uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max
             Serial.println(*digit);
             #endif // DEBUG
         } else {
-            count = clamp(count + direction * (reverse ? -1 : 1) * ipow(10, *digit), n_min, n_max);
+            count = clamp(count + direction * (reverse ? -1 : 1)
+                    * ipow(10, *digit), n_min, n_max);
             #ifdef DEBUG
             Serial.print(F("Count: "));
             Serial.println(count);
@@ -788,7 +801,8 @@ uint32_t enc_adjust(uint32_t *n, uint32_t *digit, uint32_t n_min, uint32_t n_max
 }
 
 
-uint32_t enc_adjust_nodigit(uint32_t *n, uint32_t n_min, uint32_t n_max, boolean reverse)
+uint32_t enc_adjust_nodigit(uint32_t *n, uint32_t n_min, uint32_t n_max,
+        boolean reverse)
 {
     int     direction;
     int32_t count = *n;
@@ -879,31 +893,37 @@ int prog_hist(uint32_t n)
 
             // The actual programming
             for (uint32_t k = 0; k < end_bytes; k++) {
-                delayMicroseconds(100); // This may be decreased, depending upon signal speed
+                // This may be decreased, depending upon signal speed
+                delayMicroseconds(100);
                 sbyte = hist[row*j + k];
                 crc.update(sbyte);
                 if (k % 2 == 0) {
                     lsb = sbyte;
                 } else {
                     msb = sbyte;
-                    data = 0x0FFF - ((msb << 8) | lsb); // Programming circuitry inverts, so reinvert
+                    // Programming circuitry inverts, so reinvert
+                    data = 0x0FFF - ((msb << 8) | lsb);
                     //data = ((msb << 8) | lsb); // Inverted
                     analogWrite(PROG_D, data);
-                    delayMicroseconds(1000); // This may be decreased, depending upon signal speed
+                    // This may be decreased, depending upon signal speed
+                    delayMicroseconds(1000);
                     // Write ADC output N-3 to the FIFO before latching in
                     // the next in put to the ADC.
                     if (adc_ins >= adc_off) digitalWrite(WCLK_S, HIGH);
-                    delayMicroseconds(10); // Maybe unnecessary. Check clock hold times.
+                    // These microsecond delays are probably unnecessary.
+                    // Check FIFO clock hold times.
+                    delayMicroseconds(10);
                     if (adc_ins >= adc_off) digitalWrite(WCLK_S, LOW);
-                    delayMicroseconds(10); // Maybe unnecessary. Check clock hold times.
+                    delayMicroseconds(10);
                     digitalWrite(ADC_CLK_S, HIGH);
-                    delayMicroseconds(10); // Maybe unnecessary. Check clock hold times.
+                    delayMicroseconds(10);
                     digitalWrite(ADC_CLK_S, LOW);
                     if (adc_ins < adc_off) adc_ins++;
                 }
             }
             // The last 3 (adc_off) history data words remain in the ADC.
-            // They will be clocked in after the switch to normal operation (external WCLK).
+            // They will be clocked in after the switch to normal operation
+            // (external WCLK).
 
             // Printing a hexdump back
             sprintf(hex, "%06X:\t", bufs * HBUF_SIZE + j * row);
@@ -929,7 +949,9 @@ int prog_hist(uint32_t n)
     }
     Serial.print(F("CRC32: "));
     Serial.println(crc.finalize(), HEX);
-    Serial.println(F("\nDone programming history. Waiting for start command ('go')."));
+    Serial.println(F(
+    "\nDone programming history."
+    "Waiting for start command ('go')."));
 
     return 1;
 }
@@ -978,13 +1000,16 @@ void prog_debug(void)
     // Does not account for first three words into ADC, but OK for debugging
     for (uint16_t triangle = 0u ;; triangle++) {
     //for (uint16_t triangle = 0u; triangle < nwords; triangle++) {
-        analogWrite(PROG_D, ((1<<12) - 1) - 4 * triangle); // High 4 bits are discarded. Subtraction inverts.
+        // High 4 bits are discarded. Subtraction inverts.
+        analogWrite(PROG_D, ((1<<12) - 1) - 4 * triangle);
         digitalWrite(WCLK_S, HIGH);
         digitalWrite(WCLK_S, LOW);
         digitalWrite(ADC_CLK_S, HIGH);
         digitalWrite(ADC_CLK_S, LOW);
     }
-    Serial.println(F("\nDEBUG: Done programming history. Waiting for start command ('go')."));
+    Serial.println(F(
+    "\nDEBUG: Done programming history."
+    "Waiting for start command ('go')."));
 }
 
 

@@ -1,0 +1,93 @@
+
+\makeatletter
+\def\PYGarduino@reset{\let\PYGarduino@it=\relax \let\PYGarduino@bf=\relax%
+    \let\PYGarduino@ul=\relax \let\PYGarduino@tc=\relax%
+    \let\PYGarduino@bc=\relax \let\PYGarduino@ff=\relax}
+\def\PYGarduino@tok#1{\csname PYGarduino@tok@#1\endcsname}
+\def\PYGarduino@toks#1+{\ifx\relax#1\empty\else%
+    \PYGarduino@tok{#1}\expandafter\PYGarduino@toks\fi}
+\def\PYGarduino@do#1{\PYGarduino@bc{\PYGarduino@tc{\PYGarduino@ul{%
+    \PYGarduino@it{\PYGarduino@bf{\PYGarduino@ff{#1}}}}}}}
+\def\PYGarduino#1#2{\PYGarduino@reset\PYGarduino@toks#1+\relax+\PYGarduino@do{#2}}
+
+\expandafter\def\csname PYGarduino@tok@err\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.65,0.09,0.09}{##1}}}
+\expandafter\def\csname PYGarduino@tok@c\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.58,0.65,0.65}{##1}}}
+\expandafter\def\csname PYGarduino@tok@cm\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.58,0.65,0.65}{##1}}}
+\expandafter\def\csname PYGarduino@tok@cp\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@c1\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.58,0.65,0.65}{##1}}}
+\expandafter\def\csname PYGarduino@tok@cs\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.58,0.65,0.65}{##1}}}
+\expandafter\def\csname PYGarduino@tok@k\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@kc\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.00,0.59,0.62}{##1}}}
+\expandafter\def\csname PYGarduino@tok@kd\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@kn\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@kp\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.00,0.59,0.62}{##1}}}
+\expandafter\def\csname PYGarduino@tok@kr\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.00,0.59,0.62}{##1}}}
+\expandafter\def\csname PYGarduino@tok@kt\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.00,0.59,0.62}{##1}}}
+\expandafter\def\csname PYGarduino@tok@o\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@ow\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@n\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@na\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nb\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@bp\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nc\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@no\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nd\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@ni\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@ne\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nf\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.83,0.33,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@py\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nl\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nn\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nx\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.45,0.56,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nt\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@nv\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@vc\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@vg\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@vi\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@m\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@mf\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@mh\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@mi\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@il\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@mo\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@s\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sb\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sc\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sd\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@s2\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@se\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sh\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@si\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sx\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sr\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@s1\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@ss\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@fm\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.83,0.33,0.00}{##1}}}
+\expandafter\def\csname PYGarduino@tok@vm\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.26,0.31,0.33}{##1}}}
+\expandafter\def\csname PYGarduino@tok@sa\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@dl\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.50,0.55,0.55}{##1}}}
+\expandafter\def\csname PYGarduino@tok@mb\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.54,0.48,0.32}{##1}}}
+\expandafter\def\csname PYGarduino@tok@ch\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.58,0.65,0.65}{##1}}}
+\expandafter\def\csname PYGarduino@tok@cpf\endcsname{\def\PYGarduino@tc##1{\textcolor[rgb]{0.58,0.65,0.65}{##1}}}
+
+\def\PYGarduinoZbs{\char`\\}
+\def\PYGarduinoZus{\char`\_}
+\def\PYGarduinoZob{\char`\{}
+\def\PYGarduinoZcb{\char`\}}
+\def\PYGarduinoZca{\char`\^}
+\def\PYGarduinoZam{\char`\&}
+\def\PYGarduinoZlt{\char`\<}
+\def\PYGarduinoZgt{\char`\>}
+\def\PYGarduinoZsh{\char`\#}
+\def\PYGarduinoZpc{\char`\%}
+\def\PYGarduinoZdl{\char`\$}
+\def\PYGarduinoZhy{\char`\-}
+\def\PYGarduinoZsq{\char`\'}
+\def\PYGarduinoZdq{\char`\"}
+\def\PYGarduinoZti{\char`\~}
+% for compatibility with earlier versions
+\def\PYGarduinoZat{@}
+\def\PYGarduinoZlb{[}
+\def\PYGarduinoZrb{]}
+\makeatother
+

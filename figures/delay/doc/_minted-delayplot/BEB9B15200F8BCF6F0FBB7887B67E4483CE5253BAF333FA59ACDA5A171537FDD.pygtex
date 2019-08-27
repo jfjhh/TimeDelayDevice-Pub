@@ -1,0 +1,67 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{set} \PYG{n+nb}{terminal} \PYG{n}{pngcairo} \PYG{n}{transparent} \PYG{n}{enhanced} \PYG{n}{font} \PYG{l+s}{\PYGZdq{}Droid Sans,72\PYGZdq{}} \PYGZbs{}
+      \PYG{n}{fontscale} \PYG{l+m+mf}{1.0} \PYG{n}{size} \PYG{l+m+mi}{3200}\PYG{o}{,} \PYG{l+m+mi}{2400}
+
+\PYG{c}{\PYGZsh{} Dark Owl}
+\PYG{n+nv}{text} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}ffffff\PYGZsq{}}
+\PYG{n+nv}{shade} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}5d5a96\PYGZsq{}} \PYG{c}{\PYGZsh{} (rgb(OwlRed) .+ rgb(OwlBlue)) .* 3/8}
+\PYG{n+nv}{mindelay} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}f29318\PYGZsq{}} \PYG{c}{\PYGZsh{} OwlYellow}
+\PYG{n+nv}{maxdelay} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}ff5ca8\PYGZsq{}} \PYG{c}{\PYGZsh{} OwlRed}
+\PYG{k}{set} \PYG{n+nb}{output} \PYG{l+s}{\PYGZsq{}delayplot\PYGZhy{}do.png\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Paper Color}
+\PYG{c}{\PYGZsh{} text = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} shade = \PYGZsq{}\PYGZsh{}bfbce4\PYGZsq{} \PYGZsh{} 0.25*OwlRed + 0.25*OwlBlue + 0.5*white}
+\PYG{c}{\PYGZsh{} mindelay = \PYGZsq{}\PYGZsh{}f29318\PYGZsq{} \PYGZsh{} OwlYellow}
+\PYG{c}{\PYGZsh{} maxdelay = \PYGZsq{}\PYGZsh{}ff5ca8\PYGZsq{} \PYGZsh{} OwlRed}
+\PYG{c}{\PYGZsh{} set output \PYGZsq{}delayplot\PYGZhy{}pc.png\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Paper Grayscale}
+\PYG{c}{\PYGZsh{} text = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} shade = \PYGZsq{}\PYGZsh{}c0c0c0\PYGZsq{}}
+\PYG{c}{\PYGZsh{} mindelay = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} maxdelay = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} set output \PYGZsq{}delayplot\PYGZhy{}pg.png\PYGZsq{}}
+
+\PYG{k}{set} \PYG{n+nb}{multiplot}
+\PYG{k}{set} \PYG{n+nb}{style} \PYG{n}{increment} \PYG{n}{default}
+
+\PYG{k}{set} \PYG{n+nb}{border} \PYG{n}{lw} \PYG{l+m+mi}{3} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{key} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+
+\PYG{k}{set} \PYG{n+nb}{datafile} \PYG{n}{separator} \PYG{l+s}{\PYGZsq{},\PYGZsq{}}
+\PYG{n+nv}{dlin} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}delayplot.csv\PYGZsq{}}
+
+\PYG{k}{set} \PYG{n+nb}{origin} \PYG{l+m+mi}{0}\PYG{o}{,}\PYG{l+m+mi}{0}
+\PYG{k}{set} \PYG{n+nb}{size}  \PYG{l+m+mi}{1}\PYG{o}{,}\PYG{l+m+mi}{1}
+\PYG{k}{set} \PYG{n+nb}{xtics} \PYG{n}{auto}
+\PYG{k}{set} \PYG{n+nb}{key} \PYG{n}{left} \PYG{n}{top} \PYG{n}{autotitle} \PYG{n}{columnhead}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{l+s}{\PYGZsq{}Words\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{l+s}{\PYGZsq{}τ (ms)\PYGZsq{}} \PYG{n}{offset} \PYG{l+m+mf}{1.5}\PYG{o}{,}\PYG{l+m+mi}{0}
+\PYG{k}{set} \PYG{n+nb}{logscale} \PYG{n}{xy}
+
+\PYG{k}{plot} \PYG{p}{[}\PYG{l+m+mi}{10}\PYG{o}{:}\PYG{l+m+mf}{3e5}\PYG{p}{][]} \PYGZbs{}
+       \PYG{n}{dlin} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{l+m+mi}{2}\PYG{o}{:}\PYG{l+m+mi}{1} \PYG{n+nb}{w} \PYG{n}{filledcurves} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{shade} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}\PYGZsq{}}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{dlin} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{l+m+mi}{1} \PYG{n+nb}{w} \PYG{n}{linespoints} \PYG{n}{pt} \PYG{l+m+mi}{9} \PYG{n}{ps} \PYG{l+m+mi}{3} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{mindelay} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}\PYGZsq{}}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{dlin} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{l+m+mi}{2} \PYG{n+nb}{w} \PYG{n}{linespoints} \PYG{n}{pt} \PYG{l+m+mi}{7} \PYG{n}{ps} \PYG{l+m+mi}{3} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{maxdelay} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}\PYGZsq{}}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{NaN} \PYG{n+nb}{w} \PYG{n}{linespoints} \PYG{n}{pt} \PYG{l+m+mi}{9} \PYG{n}{ps} \PYG{l+m+mi}{3} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{mindelay} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}Minimum delay\PYGZsq{}}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{NaN} \PYG{n+nb}{w} \PYG{n}{linespoints} \PYG{n}{pt} \PYG{l+m+mi}{7} \PYG{n}{ps} \PYG{l+m+mi}{3} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{maxdelay} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}Maximum delay\PYGZsq{}}
+
+\PYG{k}{set} \PYG{n+nb}{origin} \PYG{l+m+mf}{0.5}\PYG{o}{,}\PYG{l+m+mf}{0.15}
+\PYG{k}{set} \PYG{n+nb}{size}  \PYG{l+m+mf}{0.45}\PYG{o}{,}\PYG{l+m+mf}{0.4}
+\PYG{k}{set} \PYG{n+nb}{xtics} \PYG{l+m+mi}{11}\PYG{o}{,} \PYG{l+m+mi}{5}
+\PYG{k}{set} \PYG{n+nb}{ytics} \PYG{l+m+mf}{0.1}
+\PYG{k}{unset} \PYG{n+nb}{key}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{l+s}{\PYGZsq{}Words\PYGZsq{}} \PYG{n}{offset} \PYG{l+m+mi}{0}\PYG{o}{,}\PYG{l+m+mf}{0.325}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{l+s}{\PYGZsq{}τ (ms)\PYGZsq{}} \PYG{n}{offset} \PYG{l+m+mf}{1.5}\PYG{o}{,}\PYG{l+m+mi}{0}
+\PYG{k}{unset} \PYG{n+nb}{logscale}
+
+\PYG{k}{plot} \PYG{p}{[}\PYG{l+m+mi}{10}\PYG{o}{:}\PYG{l+m+mi}{21}\PYG{p}{][}\PYG{l+m+mf}{0.15}\PYG{o}{:}\PYG{l+m+mf}{0.5}\PYG{p}{]} \PYGZbs{}
+       \PYG{n}{dlin} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{l+m+mi}{2}\PYG{o}{:}\PYG{l+m+mi}{1} \PYG{n+nb}{w} \PYG{n}{filledcurves} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{shade}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{dlin} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{l+m+mi}{1} \PYG{n+nb}{w} \PYG{n}{linespoints} \PYG{n}{pt} \PYG{l+m+mi}{9} \PYG{n}{ps} \PYG{l+m+mi}{3} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{mindelay}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{dlin} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{l+m+mi}{2} \PYG{n+nb}{w} \PYG{n}{linespoints} \PYG{n}{pt} \PYG{l+m+mi}{7} \PYG{n}{ps} \PYG{l+m+mi}{3} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{maxdelay}
+
+\PYG{k}{unset} \PYG{n+nb}{multiplot}
+\end{Verbatim}

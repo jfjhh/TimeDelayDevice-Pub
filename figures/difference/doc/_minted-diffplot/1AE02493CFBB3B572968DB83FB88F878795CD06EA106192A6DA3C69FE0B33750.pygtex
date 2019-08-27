@@ -1,0 +1,90 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{set} \PYG{n+nb}{terminal} \PYG{n}{pngcairo} \PYG{n}{transparent} \PYG{n}{enhanced} \PYG{n}{font} \PYG{l+s}{\PYGZdq{}Droid Sans,72\PYGZdq{}} \PYGZbs{}
+      \PYG{n}{fontscale} \PYG{l+m+mf}{1.0} \PYG{n}{size} \PYG{l+m+mi}{3600}\PYG{o}{,} \PYG{l+m+mi}{2400}
+
+\PYG{c}{\PYGZsh{} Dark Owl}
+\PYG{c}{\PYGZsh{} text     = \PYGZsq{}\PYGZsh{}ffffff\PYGZsq{}}
+\PYG{c}{\PYGZsh{} aout     = \PYGZsq{}\PYGZsh{}f29318\PYGZsq{} \PYGZsh{} OwlYellow}
+\PYG{c}{\PYGZsh{} abessel4 = \PYGZsq{}\PYGZsh{}ff5ca8\PYGZsq{} \PYGZsh{} OwlRed}
+\PYG{c}{\PYGZsh{} adiff    = \PYGZsq{}\PYGZsh{}0098e9\PYGZsq{} \PYGZsh{} OwlBlue}
+\PYG{c}{\PYGZsh{} horiz    = \PYGZsq{}\PYGZsh{}a29bff\PYGZsq{} \PYGZsh{} (rgb(OwlRed) .+ rgb(OwlBlue)) norm. to max. blue}
+\PYG{c}{\PYGZsh{} set output \PYGZsq{}diffplot\PYGZhy{}do.png\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Paper Color}
+\PYG{n+nv}{text}     \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{n+nv}{aout}     \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}f29318\PYGZsq{}} \PYG{c}{\PYGZsh{} OwlYellow}
+\PYG{n+nv}{abessel4} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}ff5ca8\PYGZsq{}} \PYG{c}{\PYGZsh{} OwlRed}
+\PYG{n+nv}{adiff}    \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}0098e9\PYGZsq{}} \PYG{c}{\PYGZsh{} OwlBlue}
+\PYG{n+nv}{horiz}    \PYG{o}{=} \PYG{l+s}{\PYGZsq{}\PYGZsh{}a29bff\PYGZsq{}} \PYG{c}{\PYGZsh{} (rgb(OwlRed) .+ rgb(OwlBlue)) norm. to max. blue}
+\PYG{k}{set} \PYG{n+nb}{output} \PYG{l+s}{\PYGZsq{}diffplot\PYGZhy{}pc.png\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Paper Grayscale}
+\PYG{c}{\PYGZsh{} text     = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} aout     = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} abessel4 = \PYGZsq{}\PYGZsh{}888888\PYGZsq{}}
+\PYG{c}{\PYGZsh{} adiff    = \PYGZsq{}\PYGZsh{}000000\PYGZsq{}}
+\PYG{c}{\PYGZsh{} horiz    = \PYGZsq{}\PYGZsh{}ffffff\PYGZsq{}}
+\PYG{c}{\PYGZsh{} set output \PYGZsq{}diffplot\PYGZhy{}pg.png\PYGZsq{}}
+
+\PYG{k}{set} \PYG{n+nb}{border} \PYG{n}{lw} \PYG{l+m+mi}{3} \PYG{n}{lc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{key} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{n}{tc} \PYG{n}{rgb} \PYG{n}{text}
+
+\PYG{k}{set} \PYG{n+nb}{multiplot}
+\PYG{k}{set} \PYG{n+nb}{style} \PYG{n}{increment} \PYG{n}{default}
+
+\PYG{k}{set} \PYG{n+nb}{datafile} \PYG{n}{separator} \PYG{l+s}{\PYGZsq{},\PYGZsq{}}
+\PYG{n+nv}{paout}  \PYG{o}{=} \PYG{l+s}{\PYGZsq{}paout.csv\PYGZsq{}}
+\PYG{n+nv}{padiff} \PYG{o}{=} \PYG{l+s}{\PYGZsq{}padiff.csv\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Difference}
+\PYG{k}{set} \PYG{n+nb}{size}   \PYG{l+m+mi}{1}\PYG{o}{,} \PYG{l+m+mf}{0.5}
+\PYG{k}{set} \PYG{n+nb}{origin} \PYG{l+m+mi}{0}\PYG{o}{,} \PYG{l+m+mi}{0}
+\PYG{k}{set} \PYG{n+nb}{lmargin} \PYG{l+m+mi}{8}
+\PYG{k}{set} \PYG{n+nb}{xtics} \PYG{n}{auto}
+\PYG{k}{unset} \PYG{n+nb}{key}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{l+s}{\PYGZsq{}Time (μs)\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{l+s}{\PYGZsq{}Voltage (mV)\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{xrange} \PYG{p}{[}\PYG{l+m+mi}{105}\PYG{o}{:}\PYG{l+m+mi}{295}\PYG{p}{]} \PYG{n}{noreverse} \PYG{n}{writeback}
+\PYG{c}{\PYGZsh{} set xrange [199:201] noreverse writeback \PYGZsh{} Faster to plot for debugging}
+
+\PYG{k}{plot} \PYGZbs{}
+       \PYG{n}{padiff} \PYG{n+nb}{u} \PYG{l+m+mi}{1}\PYG{o}{:}\PYG{l+m+mi}{2} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{2} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{adiff}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{padiff} \PYG{n+nb}{u} \PYG{l+m+mi}{1}\PYG{o}{:}\PYG{l+m+mi}{3} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{5} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{horiz}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{padiff} \PYG{n+nb}{u} \PYG{l+m+mi}{1}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{3} \PYG{o}{+} \PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{4}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{5} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{horiz}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{padiff} \PYG{n+nb}{u} \PYG{l+m+mi}{1}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{3} \PYG{o}{\PYGZhy{}} \PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{4}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{5} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{horiz}
+
+\PYG{c}{\PYGZsh{} Waveforms zoom\PYGZhy{}in}
+\PYG{k}{set} \PYG{n+nb}{size}   \PYG{l+m+mf}{0.25}\PYG{o}{,} \PYG{l+m+mf}{0.25}
+\PYG{k}{set} \PYG{n+nb}{origin} \PYG{l+m+mf}{0.695}\PYG{o}{,} \PYG{l+m+mf}{0.56}
+\PYG{k}{set} \PYG{n+nb}{lmargin} \PYG{l+m+mi}{0}
+\PYG{k}{set} \PYG{n+nb}{xtics} \PYG{n}{auto} \PYG{l+m+mf}{0.25}
+\PYG{k}{set} \PYG{n+nb}{ytics} \PYG{n}{auto} \PYG{l+m+mf}{0.1}
+\PYG{k}{unset} \PYG{n+nb}{key}
+\PYG{k}{set} \PYG{n+nb}{xlabel} \PYG{l+s}{\PYGZsq{}t (μs)\PYGZsq{}} \PYG{n}{offset} \PYG{l+m+mi}{0}\PYG{o}{,}\PYG{l+m+mf}{0.5}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{l+s}{\PYGZsq{}V (V)\PYGZsq{}} \PYG{n}{offset} \PYG{l+m+mf}{1.25}\PYG{o}{,}\PYG{l+m+mi}{0}
+\PYG{k}{set} \PYG{n+nb}{xrange} \PYG{p}{[}\PYG{l+m+mf}{199.75}\PYG{o}{:}\PYG{l+m+mf}{200.25}\PYG{p}{]} \PYG{n}{noreverse} \PYG{n}{writeback}
+
+\PYG{k}{plot} \PYGZbs{}
+       \PYG{n}{paout} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{4} \PYG{o}{*} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{aout} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}\PYGZsq{}}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{paout} \PYG{n+nb}{u} \PYG{l+m+mi}{5}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{6} \PYG{o}{*} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{abessel4} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}\PYGZsq{}}
+
+\PYG{c}{\PYGZsh{} Waveforms}
+\PYG{k}{set} \PYG{n+nb}{size}   \PYG{l+m+mi}{1}\PYG{o}{,} \PYG{l+m+mf}{0.5}
+\PYG{k}{set} \PYG{n+nb}{origin} \PYG{l+m+mi}{0}\PYG{o}{,} \PYG{l+m+mf}{0.5}
+\PYG{k}{set} \PYG{n+nb}{lmargin} \PYG{l+m+mi}{8}
+\PYG{k}{set} \PYG{n+nb}{xtics} \PYG{n}{auto} \PYG{n}{format} \PYG{l+s}{\PYGZsq{}\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{ytics} \PYG{n}{auto}
+\PYG{k}{unset} \PYG{n+nb}{xlabel}
+\PYG{k}{set} \PYG{n+nb}{key} \PYG{n}{left} \PYG{n}{top} \PYG{n}{autotitle} \PYG{n}{columnhead}
+\PYG{k}{set} \PYG{n+nb}{ylabel} \PYG{l+s}{\PYGZsq{}Voltage (V)\PYGZsq{}}
+\PYG{k}{set} \PYG{n+nb}{xrange} \PYG{p}{[}\PYG{l+m+mi}{105}\PYG{o}{:}\PYG{l+m+mi}{295}\PYG{p}{]} \PYG{n}{noreverse} \PYG{n}{writeback}
+\PYG{c}{\PYGZsh{} set xrange [199:201] noreverse writeback \PYGZsh{} Faster to plot for debugging}
+
+\PYG{k}{plot} \PYGZbs{}
+       \PYG{n}{paout} \PYG{n+nb}{u} \PYG{l+m+mi}{3}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{4} \PYG{o}{*} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{aout} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}Output\PYGZsq{}}\PYG{o}{,} \PYGZbs{}
+       \PYG{n}{paout} \PYG{n+nb}{u} \PYG{l+m+mi}{5}\PYG{o}{:}\PYG{p}{(}\PYG{err}{\PYGZdl{}}\PYG{l+m+mi}{6} \PYG{o}{*} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{)} \PYG{n+nb}{w} \PYG{n}{lines} \PYG{n}{lw} \PYG{l+m+mi}{4} \PYG{n}{lt} \PYG{n}{rgb} \PYG{n}{abessel4} \PYG{n+nb}{t} \PYG{l+s}{\PYGZsq{}Filtered Output\PYGZsq{}}
+
+\PYG{k}{unset} \PYG{n+nb}{multiplot}
+\end{Verbatim}
